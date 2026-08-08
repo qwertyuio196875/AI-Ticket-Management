@@ -17,6 +17,11 @@ hs_err_pid*
 .project
 .classpath
 .settings/
+# Eclipse / VS Code Java：编译输出目录与注解处理器配置（Lombok 会生成 .factorypath）
+bin/
+.factorypath
+.apt_generated/
+.apt_generated_tests/
 
 # OS
 .DS_Store
