@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        ticket-ticket - 工单模块（占位骨架）
+        后续 ticket 将引入工单 CRUD / 状态机 / 评论 / 附件 / Redis 缓存 / AOP 日志。
+    -->
+    <parent>
+        <groupId>com.ticket</groupId>
+        <artifactId>ai-ticket-system</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>ticket-ticket</artifactId>
+    <packaging>jar</packaging>
+
+    <name>ticket-ticket</name>
+    <description>工单 CRUD / 状态机 / 评论 / 附件 / Redis 缓存 / AOP 日志</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ticket</groupId>
+            <artifactId>ticket-common</artifactId>
+        </dependency>
+    </dependencies>
+</project>

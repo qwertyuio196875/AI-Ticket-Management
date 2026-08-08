@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        ticket-web - 唯一入口模块（详见 ADR-0026）
+        包含 Spring Boot 启动类与 application.yml，
+        所有业务模块作为 compile 依赖聚合到一个 fat jar。
+    -->
+    <parent>
+        <groupId>com.ticket</groupId>
+        <artifactId>ai-ticket-system</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>ticket-web</artifactId>
+    <packaging>jar</packaging>
+
+    <name>ticket-web</name>
+    <description>Controller 层 / API 接口 / 请求参数处理</description>
+
+    <dependencies>
+        <!-- 业务模块全部依赖 -->
+        <dependency>
+            <groupId>com.ticket</groupId>
+            <artifactId>ticket-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ticket</groupId>
+            <artifactId>ticket-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ticket</groupId>
+            <artifactId>ticket-system</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ticket</groupId>
+            <artifactId>ticket-ticket</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ticket</groupId>
+            <artifactId>ticket-ai</artifactId>
+        </dependency>
+
+        <!-- 测试 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                ticket-web 是唯一启用 spring-boot-maven-plugin 的模块，
+                业务模块的 pom 中不要启用（详见 ADR-0026）。
+            -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

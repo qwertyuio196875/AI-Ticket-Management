@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        ticket-security - 安全模块（占位骨架）
+        后续 ticket（02 / 03）将引入 Spring Security 6 配置、JWT、权限拦截。
+        当前阶段仅保持 Maven 模块边界。
+    -->
+    <parent>
+        <groupId>com.ticket</groupId>
+        <artifactId>ai-ticket-system</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>ticket-security</artifactId>
+    <packaging>jar</packaging>
+
+    <name>ticket-security</name>
+    <description>Spring Security 配置 / JWT / 权限拦截</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ticket</groupId>
+            <artifactId>ticket-common</artifactId>
+        </dependency>
+    </dependencies>
+</project>

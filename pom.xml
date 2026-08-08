@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        AI 智能工单管理系统 - 父 POM
+        6 模块单体架构，详见 ADR-0026。
+        根 POM 仅声明模块、依赖版本，不直接构建产物。
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.5</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.ticket</groupId>
+    <artifactId>ai-ticket-system</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+
+    <name>ai-ticket-system</name>
+    <description>AI 智能工单管理系统（单体架构）</description>
+
+    <modules>
+        <module>ticket-common</module>
+        <module>ticket-security</module>
+        <module>ticket-system</module>
+        <module>ticket-ticket</module>
+        <module>ticket-ai</module>
+        <module>ticket-web</module>
+    </modules>
+
+    <properties>
+        <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- 模块版本统一管理 -->
+        <ticket-common.version>1.0.0</ticket-common.version>
+        <ticket-security.version>1.0.0</ticket-security.version>
+        <ticket-system.version>1.0.0</ticket-system.version>
+        <ticket-ticket.version>1.0.0</ticket-ticket.version>
+        <ticket-ai.version>1.0.0</ticket-ai.version>
+        <ticket-web.version>1.0.0</ticket-web.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 模块内部依赖 -->
+            <dependency>
+                <groupId>com.ticket</groupId>
+                <artifactId>ticket-common</artifactId>
+                <version>${ticket-common.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ticket</groupId>
+                <artifactId>ticket-security</artifactId>
+                <version>${ticket-security.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ticket</groupId>
+                <artifactId>ticket-system</artifactId>
+                <version>${ticket-system.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ticket</groupId>
+                <artifactId>ticket-ticket</artifactId>
+                <version>${ticket-ticket.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ticket</groupId>
+                <artifactId>ticket-ai</artifactId>
+                <version>${ticket-ai.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!--
+                    业务模块 pom 中**不要**显式启用 spring-boot-maven-plugin（详见 ADR-0026），
+                    避免 repackage 冲突。仅 ticket-web 在自己的 pom 中启用。
+                -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>
