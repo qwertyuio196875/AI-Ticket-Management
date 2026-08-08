@@ -37,6 +37,9 @@ application-local.properties
 # Scratch (per AGENTS.md: issues live under .scratch/)
 .scratch/
 
+# 设计稿：本地参考资料，不入库、不随代码分发（ticket 15 的 .dockerignore 亦排除 mockups/）
+mockups/
+
 # Node (if any tooling added later)
 node_modules/
 dist/
