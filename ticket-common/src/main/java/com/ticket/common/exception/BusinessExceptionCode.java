@@ -15,10 +15,11 @@ import org.springframework.http.HttpStatus;
  *     <li><b>message</b>：面向用户的默认提示文本，可被具体异常覆盖。</li>
  * </ul>
  * <p>
- * 后续 ticket 中将按需扩充。当前仅放置 tracer bullet 阶段需要的基础码：
+ * 后续 ticket 中将按需扩充。当前包含：
  * <ul>
  *     <li>{@link #INTERNAL_ERROR}：兜底异常</li>
  *     <li>{@link #PARAM_INVALID}：参数校验失败</li>
+ *     <li>{@link #AUTH_UNAUTHORIZED} / {@link #AUTH_FORBIDDEN}：认证授权失败（ticket 02）</li>
  * </ul>
  */
 @Getter
@@ -29,6 +30,18 @@ public enum BusinessExceptionCode {
     INTERNAL_ERROR("C0500", HttpStatus.INTERNAL_SERVER_ERROR, "系统内部错误"),
     /** 参数校验失败 — {@code @Valid} / {@code @RequestBody} / {@code @PathVariable} */
     PARAM_INVALID("C0400", HttpStatus.BAD_REQUEST, "参数校验失败"),
+
+    // ---- Auth ---- （ticket 02）
+    /**
+     * 认证失败 — 用户名 / 密码错误、账号禁用、token 缺失 / 过期 / 篡改 / 已登出。
+     * <p>
+     * code 取字面值 {@code "401"} 而非 {@code "S03xx"} 模块前缀格式：
+     * ticket 02 验收标准明确要求登录失败返回 {@code Result.error(401, ...)}，
+     * 此处服从 ticket 文档。HTTP 状态同为 401。
+     */
+    AUTH_UNAUTHORIZED("401", HttpStatus.UNAUTHORIZED, "认证失败"),
+    /** 已认证但无权限 — {@code @PreAuthorize} 校验不通过（权限数据源见 ticket 03） */
+    AUTH_FORBIDDEN("403", HttpStatus.FORBIDDEN, "没有访问权限"),
 
     // ---- Ticket ---- （占位，后续 ticket 扩充）
     TICKET_NOT_FOUND("T0101", HttpStatus.NOT_FOUND, "工单不存在"),

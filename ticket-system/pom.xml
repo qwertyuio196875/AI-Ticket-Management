@@ -6,8 +6,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!--
-        ticket-system - 系统模块（占位骨架）
-        后续 ticket 将引入用户管理 / 角色管理 / 菜单管理 / 数据字典。
+        ticket-system - 系统模块
+        ticket 02 引入 sys_user 与 UserDetailsService 实现；
+        用户 / 角色 / 菜单 / 数据字典的完整 CRUD 在 ticket 03。
+
+        依赖 ticket-security 是单向的（system → security），
+        因为本模块实现 Spring Security 的 UserDetailsService SPI。
     -->
     <parent>
         <groupId>com.ticket</groupId>
@@ -25,6 +29,34 @@
         <dependency>
             <groupId>com.ticket</groupId>
             <artifactId>ticket-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ticket</groupId>
+            <artifactId>ticket-security</artifactId>
+        </dependency>
+
+        <!-- MyBatis Plus + MySQL -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Lombok — 注解处理器不依赖传递，每个使用模块显式声明 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+
+        <!-- 单元测试 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

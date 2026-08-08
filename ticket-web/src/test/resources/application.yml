@@ -1,0 +1,31 @@
+# =============================================================
+# 测试环境配置 —— 覆盖 main 的 application.yml
+#
+# 本机无 Docker，Testcontainers 不可用（spec Seam 3 原计划用它），
+# 故用 H2 内存库（MySQL 兼容模式）替代 MySQL。
+# Redis 黑名单在集成测试中由内存实现替身接管（见 AuthIntegrationTest）。
+# =============================================================
+
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:tickettest;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+
+  # H2 与 MySQL 的 DDL 方言有差异（AUTO_INCREMENT / INSERT IGNORE / ENGINE），
+  # 故测试用独立的一份建表与种子脚本
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/h2/schema.sql
+      data-locations: classpath:db/h2/data.sql
+
+jwt:
+  secret: test-only-secret-key-for-integration-tests-32bytes+
+  expire-minutes: 30
+
+logging:
+  level:
+    root: WARN
+    com.ticket: DEBUG

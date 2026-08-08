@@ -41,6 +41,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
+        <!-- 三方依赖版本（Spring Boot parent 未托管的部分） -->
+        <mybatis-plus.version>3.5.5</mybatis-plus.version>
+        <jjwt.version>0.12.5</jjwt.version>
+
         <!-- 模块版本统一管理 -->
         <ticket-common.version>1.0.0</ticket-common.version>
         <ticket-security.version>1.0.0</ticket-security.version>
@@ -77,6 +81,35 @@
                 <groupId>com.ticket</groupId>
                 <artifactId>ticket-ai</artifactId>
                 <version>${ticket-ai.version}</version>
+            </dependency>
+
+            <!-- MyBatis Plus（Spring Boot 3 专用 starter） -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+
+            <!--
+                JJWT 0.12.x — API / 实现 / Jackson 序列化三件套拆分，
+                impl 与 jackson 仅运行期需要（详见 ticket 02）。
+            -->
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-api</artifactId>
+                <version>${jjwt.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-impl</artifactId>
+                <version>${jjwt.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-jackson</artifactId>
+                <version>${jjwt.version}</version>
+                <scope>runtime</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

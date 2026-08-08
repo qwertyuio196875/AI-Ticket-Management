@@ -6,9 +6,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!--
-        ticket-security - 安全模块（占位骨架）
-        后续 ticket（02 / 03）将引入 Spring Security 6 配置、JWT、权限拦截。
-        当前阶段仅保持 Maven 模块边界。
+        ticket-security - 安全模块
+        Spring Security 6 过滤链 + JWT 签发/校验 + Redis 黑名单（详见 ticket 02）。
+        依赖方向：本模块只依赖 ticket-common，不依赖任何业务模块 —
+        用户数据通过 Spring Security 原生 UserDetailsService SPI 由 ticket-system 提供。
     -->
     <parent>
         <groupId>com.ticket</groupId>
@@ -26,6 +27,45 @@
         <dependency>
             <groupId>com.ticket</groupId>
             <artifactId>ticket-common</artifactId>
+        </dependency>
+
+        <!-- Spring Security 6 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- Redis — JWT 黑名单存储 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- JJWT -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+        </dependency>
+
+        <!-- Lombok — 注解处理器不依赖传递，每个使用模块显式声明 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+
+        <!-- 单元测试 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

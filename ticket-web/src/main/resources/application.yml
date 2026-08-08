@@ -6,13 +6,46 @@ server:
 spring:
   application:
     name: ai-ticket-system
-  # tracer bullet 阶段：禁用不必要的自动装配，避免外部依赖被误激活
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+
+  # ticket 02 起启用 DataSource / Redis / Security 自动装配
+  # （ticket 01 tracer bullet 阶段曾整体排除，现已按需开启）
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/ai_ticket_system?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:root}
+
+  # 建表 + 种子数据（本项目不引入 Flyway，见 spec Out of Scope）
+  # DDL 用 IF NOT EXISTS、种子用 INSERT IGNORE，可重复执行
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/mysql/schema.sql
+      data-locations: classpath:db/mysql/data.sql
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 3s
+
+mybatis-plus:
+  configuration:
+    # 下划线字段名 → 驼峰属性名（create_time → createTime）
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+# JWT 单 token 方案（30 分钟过期，见 spec）
+jwt:
+  # ⚠ 生产环境必须用环境变量 JWT_SECRET 覆盖；HMAC-SHA256 要求 ≥ 32 字节
+  secret: ${JWT_SECRET:dev-only-secret-please-override-in-production-env-32bytes+}
+  expire-minutes: 30
+  header: Authorization
+  token-prefix: "Bearer "
 
 logging:
   level:

@@ -45,10 +45,31 @@
             <artifactId>ticket-ai</artifactId>
         </dependency>
 
+        <!-- Lombok — 注解处理器不依赖传递，每个使用模块显式声明 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+
         <!-- 测试 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Spring Security 测试支持（MockMvc 安全断言） -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--
+            H2 内存库 — 集成测试替代 MySQL（本机无 Docker，Testcontainers 不可用）。
+            仅 test scope，不进 fat jar。
+        -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
