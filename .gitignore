@@ -40,6 +40,11 @@ application-local.properties
 # 设计稿：本地参考资料，不入库、不随代码分发（ticket 15 的 .dockerignore 亦排除 mockups/）
 mockups/
 
+# 项目内部协作文档：仅本地查阅，不入 GitHub 公开仓库
+# （CONTEXT.md 是项目上下文，docs/adr + docs/agents 是 ADR 与 agent 协作约定）
+CONTEXT.md
+docs/
+
 # Node (if any tooling added later)
 node_modules/
 dist/
