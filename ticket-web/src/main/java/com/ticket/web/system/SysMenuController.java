@@ -3,10 +3,9 @@ package com.ticket.web.system;
 import com.ticket.common.result.Result;
 import com.ticket.security.user.LoginUser;
 import com.ticket.system.dto.SysMenuSaveDTO;
-import com.ticket.system.entity.SysMenu;
 import com.ticket.system.service.SysMenuService;
 import com.ticket.system.vo.SysMenuTreeVO;
-import com.ticket.web.system.vo.PageVO;
+import com.ticket.web.system.vo.SysMenuVO;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -46,8 +45,8 @@ public class SysMenuController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('menu:manage')")
-    public Result<List<SysMenu>> listAll() {
-        return Result.success(sysMenuService.listAll());
+    public Result<List<SysMenuVO>> listAll() {
+        return Result.success(sysMenuService.listAll().stream().map(SysMenuVO::from).toList());
     }
 
     /**
@@ -58,6 +57,9 @@ public class SysMenuController {
      * <p>
      * 不加 {@code @PreAuthorize}：菜单可见性本身就是按"角色→菜单"过滤，
      * 即使没菜单权限也能拿到"自己有权访问的"那一部分（通常非空）。
+     * <p>
+     * 服务端再过滤 {@code visible=0}（隐藏菜单），避免侧边栏出现隐藏项 —— 见
+     * SysMenuServiceImpl#treeByUser。
      */
     @GetMapping("/tree")
     public Result<List<SysMenuTreeVO>> tree(@AuthenticationPrincipal LoginUser currentUser) {
@@ -66,8 +68,8 @@ public class SysMenuController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('menu:manage')")
-    public Result<SysMenu> getById(@PathVariable Long id) {
-        return Result.success(sysMenuService.getById(id));
+    public Result<SysMenuVO> getById(@PathVariable Long id) {
+        return Result.success(SysMenuVO.from(sysMenuService.getById(id)));
     }
 
     @PostMapping
@@ -88,11 +90,5 @@ public class SysMenuController {
     public Result<Void> delete(@PathVariable Long id) {
         sysMenuService.delete(id);
         return Result.success(null);
-    }
-
-    /** 仅用于占位 —— 保持 PageVO 引用，否则 IDE 警告 unused import */
-    @SuppressWarnings("unused")
-    private static <T> PageVO<T> emptyPage() {
-        return new PageVO<>(0, 1, 0, List.of());
     }
 }

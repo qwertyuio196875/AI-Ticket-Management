@@ -1,16 +1,23 @@
 -- =============================================================
--- ticket 03 — RBAC 种子数据（MySQL 8）
+-- AI 智能工单管理系统 — 数据库种子数据（MySQL 8）
 --
--- 初始菜单与角色构成最小可演示集合：
---   5 个顶级菜单（Dashboard / 用户管理 / 角色管理 / 菜单管理 / 工单列表），
---   2 个角色：admin（全部菜单） / agent（仅工单 + Dashboard）。
---   admin 用户挂 admin 角色，其他用户暂不挂角色（用户管理页面分配）。
+-- 由 Spring Boot spring.sql.init 在启动时执行；INSERT IGNORE
+-- 配合唯一索引保证可重复执行不报错。
 --
--- INSERT IGNORE 配合唯一索引保证可重复执行不报错。
--- 角色与菜单的对应关系见 ticket-system 模块下的 sys_role_menu。
+-- 维护说明：ticket 之间如果新增种子，请 append 到本文件末尾，
+-- 并同步更新 src/test/resources/db/h2/data.sql。
 -- =============================================================
 
--- 角色 ----------------------------------------------------------
+-- 用户种子（ticket 02） ----------------------------------------
+-- admin / admin123 —— BCryptPasswordEncoder (strength 10) 生成。
+-- ⚠ 生产环境务必首次登录后立即改密。
+INSERT IGNORE INTO sys_user (username, password, nickname, status)
+VALUES ('admin',
+        '$2a$10$MQKQ7Jv5VkM7Gkfzzcj.GexHeZQdBR8PBtY4BFgifgececRtcpNfm',
+        '超级管理员',
+        1);
+
+-- 角色种子（ticket 03） ----------------------------------------
 INSERT IGNORE INTO sys_role (id, role_name, role_key, remark) VALUES
     (1, '超级管理员', 'admin', '拥有全部权限'),
     (2, '客服坐席',   'agent', '负责处理工单');

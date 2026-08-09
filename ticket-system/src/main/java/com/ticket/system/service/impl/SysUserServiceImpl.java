@@ -13,9 +13,9 @@ import com.ticket.system.entity.SysUser;
 import com.ticket.system.entity.SysUserRole;
 import com.ticket.system.mapper.SysMenuMapper;
 import com.ticket.system.mapper.SysRoleMapper;
-import com.ticket.system.mapper.SysRoleMenuMapper;
 import com.ticket.system.mapper.SysUserMapper;
 import com.ticket.system.mapper.SysUserRoleMapper;
+import com.ticket.system.service.SysMenuService;
 import com.ticket.system.service.SysUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,20 +52,20 @@ public class SysUserServiceImpl implements SysUserService {
     private final SysUserMapper userMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SysRoleMapper roleMapper;
-    private final SysRoleMenuMapper roleMenuMapper;
+    private final SysMenuService menuService;
     private final SysMenuMapper menuMapper;
     private final PasswordEncoder passwordEncoder;
 
     public SysUserServiceImpl(SysUserMapper userMapper,
                               SysUserRoleMapper userRoleMapper,
                               SysRoleMapper roleMapper,
-                              SysRoleMenuMapper roleMenuMapper,
+                              SysMenuService menuService,
                               SysMenuMapper menuMapper,
                               PasswordEncoder passwordEncoder) {
         this.userMapper = userMapper;
         this.userRoleMapper = userRoleMapper;
         this.roleMapper = roleMapper;
-        this.roleMenuMapper = roleMenuMapper;
+        this.menuService = menuService;
         this.menuMapper = menuMapper;
         this.passwordEncoder = passwordEncoder;
     }
@@ -197,12 +197,8 @@ public class SysUserServiceImpl implements SysUserService {
 
     @Override
     public List<String> listPermissions(Long userId) {
-        // 用户 → 角色 → 菜单 → permission；用 IN 一次性查
-        List<Long> roleIds = userRoleMapper.findRoleIdsByUserId(userId);
-        if (roleIds.isEmpty()) {
-            return List.of();
-        }
-        List<Long> menuIds = roleMenuMapper.findMenuIdsByRoleIds(roleIds);
+        // 复用 SysMenuService 的 user → role → menu 三跳链
+        List<Long> menuIds = menuService.findMenuIdsByUser(userId);
         if (menuIds.isEmpty()) {
             return List.of();
         }

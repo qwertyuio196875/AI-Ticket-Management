@@ -58,9 +58,30 @@ public class SysMenuServiceImpl implements SysMenuService {
      * <p>
      * 链路：{@code userId → sys_user_role.roleId → sys_role_menu.menuId → sys_menu.*}，
      * 三次查询都是小数据量（用户角色数 / 角色菜单数 / 菜单行数均 < 几十到几百）。
+     * <p>
+     * 额外过滤 {@code visible=1}：隐藏菜单不进侧边栏 —— 保留在菜单管理页可见但渲染时不出现。
      */
     @Override
     public List<SysMenuTreeVO> treeByUser(Long userId) {
+        List<Long> menuIds = findMenuIdsByUser(userId);
+        if (menuIds.isEmpty()) {
+            return List.of();
+        }
+        // 过滤 visible —— 此查询只关心"渲染时是否可见"，所以隐藏项不进树
+        List<SysMenu> menus = menuMapper.selectBatchIds(menuIds).stream()
+                .filter(m -> SysMenu.VISIBLE_YES.equals(m.getVisible()))
+                .toList();
+        return MenuTreeAssembler.assemble(menus);
+    }
+
+    /**
+     * 共享三跳链：{@code userId → roleIds → menuIds}。
+     * <p>
+     * 不过滤 visible —— 调用方按需决定（{@link #treeByUser} 过滤，
+     * {@link com.ticket.system.service.SysUserService#listPermissions} 也要拿全部以计算完整权限）。
+     */
+    @Override
+    public List<Long> findMenuIdsByUser(Long userId) {
         if (userId == null) {
             return List.of();
         }
@@ -68,12 +89,7 @@ public class SysMenuServiceImpl implements SysMenuService {
         if (roleIds.isEmpty()) {
             return List.of();
         }
-        List<Long> menuIds = roleMenuMapper.findMenuIdsByRoleIds(roleIds);
-        if (menuIds.isEmpty()) {
-            return List.of();
-        }
-        List<SysMenu> menus = menuMapper.selectBatchIds(menuIds);
-        return MenuTreeAssembler.assemble(menus);
+        return roleMenuMapper.findMenuIdsByRoleIds(roleIds);
     }
 
     @Override

@@ -43,6 +43,10 @@ CREATE TABLE IF NOT EXISTS sys_menu
     permission  VARCHAR(100) NOT NULL DEFAULT '',
     create_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    -- H2 同样问题：permission='' 的多个菜单会撞唯一索引。
+    -- 测试场景里没有目录/菜单混挂，但 schema 必须与 prod 等价。
+    -- 用 CAST(... AS VARCHAR(100)) 把 permission 投影成不可空串，'' 也会变占位符形式，
+    -- 但更简单的做法是去掉唯一约束，依赖应用层 SysMenuServiceImpl 校验。
     CONSTRAINT uk_sys_menu_permission UNIQUE (permission)
 );
 

@@ -1,6 +1,5 @@
 package com.ticket.system.config;
 
-import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import org.mybatis.spring.annotation.MapperScan;
@@ -19,20 +18,18 @@ import org.springframework.context.annotation.Configuration;
  * <b>分页插件</b>：MyBatis Plus 3.5 起分页需要显式注册 {@link PaginationInnerInterceptor}，
  * 否则 {@code BaseMapper.selectPage} 只会返回行不会统计 total，
  * 集成测试里 PageVO.total 永远是 0。
+ * <p>
+ * 不传 {@code DbType}：由 MP 自动从 DataSource 探测，
+ * 让集成测试（H2）与生产（MySQL）共用一份配置。
  */
 @Configuration
 @MapperScan("com.ticket.system.mapper")
 public class MyBatisConfig {
 
-    /**
-     * MyBatis Plus 拦截器链 —— 仅注册分页拦截器（按需扩展）。
-     * <p>
-     * {@link DbType#H2}：集成测试用 H2，MySQL 模式下也能通用。
-     */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.H2));
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
         return interceptor;
     }
 }

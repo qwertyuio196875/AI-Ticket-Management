@@ -32,6 +32,18 @@ public interface SysMenuService {
 
     SysMenu getById(Long id);
 
+    /**
+     * 共享的"user → role → menu"链路 —— 取某用户能访问的全部菜单 id。
+     * <p>
+     * ticket 03 阶段两处复用：
+     * <ul>
+     *     <li>{@link #treeByUser} 拿菜单行后再组装树</li>
+     *     <li>{@link com.ticket.system.service.SysUserService#listPermissions} 拿菜单行后抽 permission</li>
+     * </ul>
+     * 抽到 Service 层避免两边各写一份 SQL 链。
+     */
+    List<Long> findMenuIdsByUser(Long userId);
+
     Long create(SysMenuSaveDTO dto);
 
     void update(SysMenuSaveDTO dto);

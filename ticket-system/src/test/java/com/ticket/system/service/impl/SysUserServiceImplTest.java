@@ -12,9 +12,9 @@ import com.ticket.system.entity.SysUser;
 import com.ticket.system.entity.SysUserRole;
 import com.ticket.system.mapper.SysMenuMapper;
 import com.ticket.system.mapper.SysRoleMapper;
-import com.ticket.system.mapper.SysRoleMenuMapper;
 import com.ticket.system.mapper.SysUserMapper;
 import com.ticket.system.mapper.SysUserRoleMapper;
+import com.ticket.system.service.SysMenuService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,7 +50,7 @@ class SysUserServiceImplTest {
     @Mock SysUserMapper userMapper;
     @Mock SysUserRoleMapper userRoleMapper;
     @Mock SysRoleMapper roleMapper;
-    @Mock SysRoleMenuMapper roleMenuMapper;
+    @Mock SysMenuService menuService;
     @Mock SysMenuMapper menuMapper;
     @Mock PasswordEncoder passwordEncoder;
 
@@ -261,15 +261,14 @@ class SysUserServiceImplTest {
 
     @Test
     void listPermissions_returns_empty_when_user_has_no_roles() {
-        when(userRoleMapper.findRoleIdsByUserId(7L)).thenReturn(List.of());
+        when(menuService.findMenuIdsByUser(7L)).thenReturn(List.of());
         assertThat(service.listPermissions(7L)).isEmpty();
-        verify(roleMenuMapper, never()).findMenuIdsByRoleIds(any());
+        verify(menuMapper, never()).selectBatchIds(any());
     }
 
     @Test
     void listPermissions_aggregates_unique_non_empty_permissions() {
-        when(userRoleMapper.findRoleIdsByUserId(7L)).thenReturn(List.of(10L, 11L));
-        when(roleMenuMapper.findMenuIdsByRoleIds(List.of(10L, 11L))).thenReturn(List.of(100L, 101L, 102L));
+        when(menuService.findMenuIdsByUser(7L)).thenReturn(List.of(100L, 101L, 102L));
         SysMenu m1 = menuWithPerm(100L, "ticket:view");
         SysMenu m2 = menuWithPerm(101L, "ticket:create"); // permission 同名（duplicate）
         SysMenu m3 = menuWithPerm(102L, "");              // 空 permission —— 跳过
