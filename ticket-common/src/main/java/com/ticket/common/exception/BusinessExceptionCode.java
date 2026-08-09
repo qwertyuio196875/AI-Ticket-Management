@@ -47,9 +47,21 @@ public enum BusinessExceptionCode {
     TICKET_NOT_FOUND("T0101", HttpStatus.NOT_FOUND, "工单不存在"),
     TICKET_INVALID_TRANSITION("T0102", HttpStatus.CONFLICT, "工单状态非法迁移"),
 
-    // ---- System ---- （占位）
+    // ---- System ---- （ticket 03 补齐 RBAC 相关码）
+    /** 用户不存在 —— {@code sys_user.id} 未命中 */
     USER_NOT_FOUND("S0101", HttpStatus.NOT_FOUND, "用户不存在"),
+    /** 用户名已被占用 —— 唯一索引冲突转业务异常 */
+    USER_DUPLICATE("S0102", HttpStatus.CONFLICT, "用户名已存在"),
+    /** 角色不存在 —— {@code sys_role.id} 未命中 */
     ROLE_NOT_FOUND("S0201", HttpStatus.NOT_FOUND, "角色不存在"),
+    /** 角色 key 重复 —— role_key 唯一索引冲突 */
+    ROLE_DUPLICATE("S0202", HttpStatus.CONFLICT, "角色标识已存在"),
+    /** 菜单不存在 —— {@code sys_menu.id} 未命中 */
+    MENU_NOT_FOUND("S0301", HttpStatus.NOT_FOUND, "菜单不存在"),
+    /** 菜单 permission 重复 —— 同一权限字符串被两个菜单占用 */
+    MENU_PERMISSION_DUPLICATE("S0302", HttpStatus.CONFLICT, "菜单权限字符串已存在"),
+    /** 至少需要一个超级管理员 —— 防止把所有 admin 角色全删光 */
+    LAST_ADMIN_PROTECTED("S0303", HttpStatus.CONFLICT, "系统至少保留一名超级管理员"),
 
     // ---- AI ---- （占位）
     AI_UNAVAILABLE("A0101", HttpStatus.SERVICE_UNAVAILABLE, "AI 服务不可用");

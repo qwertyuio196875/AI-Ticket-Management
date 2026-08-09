@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * 统一捕获 Controller 抛出的异常并包装为 {@link Result}：
  * <ul>
  *     <li>{@link BusinessException}：业务异常，HTTP 状态取自 {@link BusinessExceptionCode#getHttpStatus()}</li>
+ *     <li>{@link AccessDeniedException}：{@code @PreAuthorize} 拒绝，HTTP 403</li>
  *     <li>{@link MethodArgumentNotValidException}：
  *         {@code @Valid @RequestBody} 校验失败，HTTP 400 + 第一个字段错误</li>
  *     <li>{@link Exception} 兜底：未预期异常，HTTP 500 + 通用消息</li>
@@ -40,6 +42,21 @@ public class GlobalExceptionHandler {
                 request.getMethod(), request.getRequestURI(), ex.getCode(), ex.getMessage());
         BusinessExceptionCode statusSource = resolveByCodeOrFallback(ex.getCode());
         return respond(statusSource, ex.getCode(), ex.getMessage());
+    }
+
+    /**
+     * {@code @PreAuthorize} 拒绝（Spring Security 6 在方法拦截器处抛 {@link AccessDeniedException}）。
+     * <p>
+     * 这里兜底处理的原因：当请求进入 Controller 方法前被 AOP 拦截拒绝，
+     * Spring 的 {@code ExceptionTranslationFilter} 通常会被绕过（AOP 异常不经过过滤器链），
+     * 直接落到 {@code @ExceptionHandler(Exception.class)}，被错误地包成 500。
+     * 显式声明后能恢复正确的 403 语义。
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Result<Void>> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        log.warn("AccessDenied at [{} {}]: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
+        BusinessExceptionCode source = BusinessExceptionCode.AUTH_FORBIDDEN;
+        return respond(source, source.getCode(), source.getMessage());
     }
 
     /**

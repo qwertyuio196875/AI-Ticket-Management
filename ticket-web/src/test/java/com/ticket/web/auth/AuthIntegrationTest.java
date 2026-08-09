@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -141,8 +143,8 @@ class AuthIntegrationTest {
                 .andExpect(jsonPath("$.code").value(equalTo("200")))
                 .andExpect(jsonPath("$.data.username").value(equalTo("admin")))
                 .andExpect(jsonPath("$.data.userId").value(equalTo(1)))
-                // ticket 02 阶段权限为空，ticket 03 接入 sys_menu.permission 后才有值
-                .andExpect(jsonPath("$.data.authorities").isEmpty());
+                // ticket 03 起：sys_menu.permission 通过 JWT 载荷透传，admin 至少有 5 个权限
+                .andExpect(jsonPath("$.data.authorities", hasSize(greaterThanOrEqualTo(1))));
     }
 
     @Test

@@ -35,6 +35,16 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!--
+            Spring Security Core —— 仅为了在 GlobalExceptionHandler 中识别
+            @PreAuthorize 抛出的 AccessDeniedException，转成 403。
+            ticket-security 模块本身已传递依赖，这里显式声明让 common 模块自给自足。
+        -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+        </dependency>
+
         <!-- Lombok 简化样板代码 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
