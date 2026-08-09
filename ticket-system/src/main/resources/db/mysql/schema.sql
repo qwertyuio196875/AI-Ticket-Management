@@ -87,3 +87,39 @@ CREATE TABLE IF NOT EXISTS sys_role_menu
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='角色 ↔ 菜单';
+
+-- 数据字典（ticket 04） ----------------------------------------
+-- 将 priority / comment_type / status 等枚举的可选项抽到表里管理
+-- (dict_type, dict_value) 联合唯一：同 type 下 value 不能重复
+CREATE TABLE IF NOT EXISTS sys_dict
+(
+    id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    dict_type  VARCHAR(50)     NOT NULL COMMENT '字典类型，如 priority / comment_type / status',
+    dict_value VARCHAR(50)     NOT NULL COMMENT '字典值（代码里硬编码引用），如 HIGH / CUSTOMER',
+    dict_label VARCHAR(50)     NOT NULL DEFAULT '' COMMENT '字典展示名（中文），如 高 / 客户',
+    sort       INT             NOT NULL DEFAULT 0 COMMENT '同 type 下的排序号，升序',
+    status     TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：1 启用 / 0 禁用',
+    remark     VARCHAR(255)    NOT NULL DEFAULT '' COMMENT '备注',
+    create_time DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_sys_dict_type_value (dict_type, dict_value),
+    KEY idx_sys_dict_type (dict_type)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='数据字典（priority / comment_type / status 等）';
+
+-- 工单分类（ticket 04） ----------------------------------------
+-- 管理员可配置的工单分类字典；AI 分类结果（type）应与本表对齐
+CREATE TABLE IF NOT EXISTS ticket_category
+(
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    name        VARCHAR(50)     NOT NULL COMMENT '分类名（中文展示）',
+    description VARCHAR(255)    NOT NULL DEFAULT '' COMMENT '分类描述',
+    sort        INT             NOT NULL DEFAULT 0 COMMENT '排序号，升序',
+    status      TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：1 启用 / 0 禁用',
+    create_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_ticket_category_name (name)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='工单分类（与 AI 分类结果对齐）';

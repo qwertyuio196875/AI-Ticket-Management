@@ -42,3 +42,38 @@ INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
 -- 用户 ↔ 角色 ---------------------------------------------------
 -- 默认 admin 用户（ticket 02 已建，id=1）挂 admin 角色
 INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (1, 1);
+
+-- 数据字典种子（ticket 04） ------------------------------------
+-- 3 个 dict_type：priority / comment_type / status
+INSERT IGNORE INTO sys_dict (dict_type, dict_value, dict_label, sort, status, remark) VALUES
+    -- priority：工单优先级
+    ('priority', 'HIGH',   '高',   1, 1, '紧急处理'),
+    ('priority', 'MEDIUM', '中',   2, 1, '正常排期'),
+    ('priority', 'LOW',    '低',   3, 1, '可延后'),
+    -- comment_type：工单评论类型
+    ('comment_type', 'CUSTOMER', '客户', 1, 1, '外部客户回复'),
+    ('comment_type', 'AGENT',    '客服', 2, 1, '客服坐席回复'),
+    ('comment_type', 'INTERNAL', '内部', 3, 1, '内部备注'),
+    -- status：工单状态（与 TicketStatus 枚举对齐）
+    ('status', 'PENDING',    '待处理', 1, 1, '工单初始状态'),
+    ('status', 'PROCESSING', '处理中', 2, 1, '已分配处理人'),
+    ('status', 'RESOLVED',   '已解决', 3, 1, '处理完成等待确认'),
+    ('status', 'CLOSED',     '已关闭', 4, 1, '工单关闭');
+
+-- 工单分类种子（ticket 04） ------------------------------------
+INSERT IGNORE INTO ticket_category (name, description, sort, status) VALUES
+    ('系统故障', '服务器、网络、数据库等基础设施故障', 1, 1),
+    ('网络问题', '网络连接、VPN、带宽等相关问题',     2, 1),
+    ('业务咨询', '业务流程、系统使用相关的咨询',     3, 1),
+    ('账号权限', '账号开通、权限变更、密码重置等',   4, 1),
+    ('其他',     '未明确分类的工单',                 5, 1);
+
+-- 菜单权限点（ticket 04） ------------------------------------
+-- 字典管理、工单分类管理：与 ticket 03 风格一致，顶层 C 类型菜单
+INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) VALUES
+    (6, 0, '字典管理',   'C', '/dicts',          'DictList',          'dict',     6, 1, 'dict:manage'),
+    (7, 0, '工单分类',   'C', '/ticket-categories', 'TicketCategoryList', 'category', 7, 1, 'category:manage');
+
+-- 角色 ↔ 菜单（admin 新增两个权限点；agent 维持原状）
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
+    (1, 6), (1, 7);

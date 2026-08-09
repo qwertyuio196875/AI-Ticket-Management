@@ -63,6 +63,16 @@ public enum BusinessExceptionCode {
     /** 至少需要一个超级管理员 —— 防止把所有 admin 角色全删光 */
     LAST_ADMIN_PROTECTED("S0303", HttpStatus.CONFLICT, "系统至少保留一名超级管理员"),
 
+    // ---- System ---- （ticket 04 补齐数据字典 / 工单分类相关码）
+    /** 字典条目不存在 —— {@code sys_dict.id} 未命中 */
+    DICT_NOT_FOUND("S0401", HttpStatus.NOT_FOUND, "字典条目不存在"),
+    /** 字典重复 —— 同 {@code dict_type} 下 {@code dict_value} 唯一索引冲突 */
+    DICT_DUPLICATE("S0402", HttpStatus.CONFLICT, "同类型下字典值已存在"),
+    /** 工单分类不存在 —— {@code ticket_category.id} 未命中 */
+    CATEGORY_NOT_FOUND("S0501", HttpStatus.NOT_FOUND, "工单分类不存在"),
+    /** 工单分类重复 —— {@code name} 唯一索引冲突 */
+    CATEGORY_DUPLICATE("S0502", HttpStatus.CONFLICT, "工单分类名称已存在"),
+
     // ---- AI ---- （占位）
     AI_UNAVAILABLE("A0101", HttpStatus.SERVICE_UNAVAILABLE, "AI 服务不可用");
 

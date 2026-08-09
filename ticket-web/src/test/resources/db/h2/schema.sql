@@ -1,5 +1,5 @@
 -- =============================================================
--- ticket 03 — RBAC 表结构（H2，MySQL 兼容模式，仅测试用）
+-- ticket 03/04 — RBAC + 数据字典 + 工单分类 表结构（H2，MySQL 兼容模式，仅测试用）
 --
 -- 与 ticket-system/src/main/resources/db/mysql/schema.sql 结构一致，
 -- 去掉 H2 不支持的 ENGINE / COLLATE / COMMENT 语法。
@@ -62,4 +62,32 @@ CREATE TABLE IF NOT EXISTS sys_role_menu
     role_id BIGINT NOT NULL,
     menu_id BIGINT NOT NULL,
     PRIMARY KEY (role_id, menu_id)
+);
+
+-- 数据字典（ticket 04） ----------------------------------------
+CREATE TABLE IF NOT EXISTS sys_dict
+(
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    dict_type   VARCHAR(50)  NOT NULL,
+    dict_value  VARCHAR(50)  NOT NULL,
+    dict_label  VARCHAR(50)  NOT NULL DEFAULT '',
+    sort        INT          NOT NULL DEFAULT 0,
+    status      TINYINT      NOT NULL DEFAULT 1,
+    remark      VARCHAR(255) NOT NULL DEFAULT '',
+    create_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_sys_dict_type_value UNIQUE (dict_type, dict_value)
+);
+
+-- 工单分类（ticket 04） ----------------------------------------
+CREATE TABLE IF NOT EXISTS ticket_category
+(
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    name        VARCHAR(50)  NOT NULL,
+    description VARCHAR(255) NOT NULL DEFAULT '',
+    sort        INT          NOT NULL DEFAULT 0,
+    status      TINYINT      NOT NULL DEFAULT 1,
+    create_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_ticket_category_name UNIQUE (name)
 );

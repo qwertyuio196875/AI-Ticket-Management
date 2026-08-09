@@ -1,9 +1,10 @@
 -- =============================================================
--- ticket 03 — 集成测试种子数据（H2）
+-- ticket 03/04 — 集成测试种子数据（H2）
 --
 -- admin 的哈希与 ticket 02 保持一致（admin/admin123）；
 -- ticket 03 起新增普通用户 agent_user，挂 agent 角色，
 -- 用于验证「无 user:manage 权限时 POST /users 被 @PreAuthorize 拦成 403」。
+-- ticket 04 起新增字典/分类种子 + 两个权限点。
 -- =============================================================
 
 -- 用户 ---------------------------------------------------------
@@ -38,6 +39,11 @@ MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon,
     VALUES (4, 0, '菜单管理',   'C', '/menus',      'MenuList',   'menu',      4, 1, 'menu:manage');
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
     VALUES (5, 0, '工单列表',   'C', '/tickets',    'TicketList', 'ticket',    5, 1, 'ticket:view');
+-- ticket 04 新增两个权限点
+MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
+    VALUES (6, 0, '字典管理', 'C', '/dicts',          'DictList',          'dict',     6, 1, 'dict:manage');
+MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
+    VALUES (7, 0, '工单分类', 'C', '/ticket-categories', 'TicketCategoryList', 'category', 7, 1, 'category:manage');
 
 -- 角色 ↔ 菜单 ---------------------------------------------------
 -- admin：全菜单
@@ -46,6 +52,8 @@ MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 2)
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 3);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 4);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 5);
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 6);
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 7);
 -- agent：仅 dashboard + ticket
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 1);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 5);
@@ -53,3 +61,24 @@ MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 5)
 -- 用户 ↔ 角色 ---------------------------------------------------
 MERGE INTO sys_user_role (user_id, role_id) KEY (user_id, role_id) VALUES (1, 1);
 MERGE INTO sys_user_role (user_id, role_id) KEY (user_id, role_id) VALUES (3, 2);
+
+-- 数据字典种子（ticket 04） ------------------------------------
+MERGE INTO sys_dict (id, dict_type, dict_value, dict_label, sort, status, remark) KEY (id) VALUES
+    (1,  'priority',     'HIGH',      '高',       1, 1, '紧急处理'),
+    (2,  'priority',     'MEDIUM',    '中',       2, 1, '正常排期'),
+    (3,  'priority',     'LOW',       '低',       3, 1, '可延后'),
+    (4,  'comment_type', 'CUSTOMER',  '客户',     1, 1, '外部客户回复'),
+    (5,  'comment_type', 'AGENT',     '客服',     2, 1, '客服坐席回复'),
+    (6,  'comment_type', 'INTERNAL',  '内部',     3, 1, '内部备注'),
+    (7,  'status',       'PENDING',   '待处理',   1, 1, '工单初始状态'),
+    (8,  'status',       'PROCESSING','处理中',   2, 1, '已分配处理人'),
+    (9,  'status',       'RESOLVED',  '已解决',   3, 1, '处理完成等待确认'),
+    (10, 'status',       'CLOSED',    '已关闭',   4, 1, '工单关闭');
+
+-- 工单分类种子（ticket 04） ------------------------------------
+MERGE INTO ticket_category (id, name, description, sort, status) KEY (id) VALUES
+    (1, '系统故障',  '服务器、网络、数据库等基础设施故障', 1, 1),
+    (2, '网络问题',  '网络连接、VPN、带宽等相关问题',     2, 1),
+    (3, '业务咨询',  '业务流程、系统使用相关的咨询',     3, 1),
+    (4, '账号权限',  '账号开通、权限变更、密码重置等',   4, 1),
+    (5, '其他',      '未明确分类的工单',                 5, 1);

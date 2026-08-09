@@ -110,12 +110,13 @@ class RbacIntegrationTest {
     }
 
     @Test
-    void menu_tree_for_admin_returns_all_five_seeded_menus() throws Exception {
+    void menu_tree_for_admin_returns_all_seeded_menus() throws Exception {
+        // ticket 04 起新增字典管理 / 工单分类两个菜单，admin 共可见 7 个
         String adminToken = loginAs("admin", "admin123");
         mockMvc().perform(get(MENUS_TREE_URL)
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data", hasSize(5)));
+                .andExpect(jsonPath("$.data", hasSize(7)));
     }
 
     @Test
