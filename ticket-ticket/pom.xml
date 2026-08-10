@@ -6,8 +6,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!--
-        ticket-ticket - 工单模块（占位骨架）
-        后续 ticket 将引入工单 CRUD / 状态机 / 评论 / 附件 / Redis 缓存 / AOP 日志。
+        ticket-ticket - 工单主业务模块（ticket 05 起落地）。
+        负责 ticket_info / ticket_log / operation_log 的 CRUD + 业务事件流 +
+        AOP @OperationLog 切面审计；后续 ticket 在此基础上叠加状态机（06）/
+        评论（07）/ AI（08）/ 缓存（09）等能力。
     -->
     <parent>
         <groupId>com.ticket</groupId>
@@ -22,9 +24,74 @@
     <description>工单 CRUD / 状态机 / 评论 / 附件 / Redis 缓存 / AOP 日志</description>
 
     <dependencies>
+        <!-- 业务基础：Result / Exception / 异常码 -->
         <dependency>
             <groupId>com.ticket</groupId>
             <artifactId>ticket-common</artifactId>
+        </dependency>
+
+        <!--
+            ticket-system：用户/角色/菜单 RBAC 数据源。
+            ticket-ticket 不直接 import ticket-system 的 Service（避免横向依赖），
+            但需要 sys_user 表的 username 字段以组装 TicketVO 展示名，
+            通过 mapper SQL JOIN 拿到，不在 Service 层跨模块调用。
+        -->
+        <dependency>
+            <groupId>com.ticket</groupId>
+            <artifactId>ticket-system</artifactId>
+        </dependency>
+
+        <!--
+            ticket-security：LoginUser（Spring Security UserDetails 实现）。
+            切面/Service 从 SecurityContext 取当前登录用户，需要这个类型。
+        -->
+        <dependency>
+            <groupId>com.ticket</groupId>
+            <artifactId>ticket-security</artifactId>
+        </dependency>
+
+        <!-- MyBatis Plus 3.5（Spring Boot 3 专用 starter） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+
+        <!-- 参数校验（@NotBlank / @Size 等） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!--
+            AOP：@OperationLog 切面需要 aspectjweaver。
+            启动类在 ticket-web，spring-aop 自动装配会随 starter 进来；
+            但 AOP starter 必须显式声明（不会从 web 自动透传）。
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
+        <!--
+            ticket_no 生成（ADR-0006）走 Redis INCR，需要 StringRedisTemplate。
+            集成测试环境没有 Redis，通过 InMemoryTicketNoGenerator 替身注入。
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- Lombok：与 ticket-system / ticket-web 一致，显式声明避免传递丢失 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+
+        <!-- 测试：JUnit 5 + Mockito 由 spring-boot-starter-test 透传 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

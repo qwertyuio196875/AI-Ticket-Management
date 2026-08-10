@@ -77,3 +77,17 @@ INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, componen
 -- 角色 ↔ 菜单（admin 新增两个权限点；agent 维持原状）
 INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
     (1, 6), (1, 7);
+
+-- 菜单权限点（ticket 05） ------------------------------------
+-- 工单写操作权限：ticket:create（创建）、ticket:update（修改）、ticket:delete（删除）
+-- 挂在工单列表菜单（id=5）下作按钮；agent 不绑 —— 写操作只允许管理员
+-- 注：{@code ticket:update} 用于 ticket 06+ 的"管理员改他人工单"场景；
+-- ticket 05 内仍由 Service 层的"创建人或管理员"规则（{@code ensureCreatorOrAdmin}）把关
+INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) VALUES
+    (8, 5, '新建工单', 'F', '', '', '', 1, 1, 'ticket:create'),
+    (9, 5, '修改工单', 'F', '', '', '', 2, 1, 'ticket:update'),
+    (10, 5, '删除工单', 'F', '', '', '', 3, 1, 'ticket:delete');
+
+-- 角色 ↔ 菜单：admin 拥有 ticket:create / ticket:update / ticket:delete
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
+    (1, 8), (1, 9), (1, 10);

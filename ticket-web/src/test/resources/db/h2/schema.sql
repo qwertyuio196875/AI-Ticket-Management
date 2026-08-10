@@ -91,3 +91,60 @@ CREATE TABLE IF NOT EXISTS ticket_category
     PRIMARY KEY (id),
     CONSTRAINT uk_ticket_category_name UNIQUE (name)
 );
+
+-- 工单主表（ticket 05） ----------------------------------------
+CREATE TABLE IF NOT EXISTS ticket_info
+(
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    ticket_no   VARCHAR(30)  NOT NULL,
+    title       VARCHAR(100) NOT NULL DEFAULT '',
+    content     CLOB         NOT NULL,
+    type        VARCHAR(50)  NOT NULL DEFAULT '',
+    priority    VARCHAR(20)  NOT NULL DEFAULT 'MEDIUM',
+    status      VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
+    creator_id  BIGINT       NOT NULL,
+    handler_id  BIGINT       DEFAULT NULL,
+    create_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted  TINYINT      NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_ticket_no UNIQUE (ticket_no)
+);
+CREATE INDEX IF NOT EXISTS idx_ticket_info_status ON ticket_info (status);
+CREATE INDEX IF NOT EXISTS idx_ticket_info_handler_id ON ticket_info (handler_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_info_create_time ON ticket_info (create_time);
+CREATE INDEX IF NOT EXISTS idx_ticket_info_status_handler_createtime
+    ON ticket_info (status, handler_id, create_time);
+
+-- 工单业务事件流水（ticket 05） --------------------------------
+CREATE TABLE IF NOT EXISTS ticket_log
+(
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    ticket_id   BIGINT       NOT NULL,
+    event_type  VARCHAR(20)  NOT NULL,
+    operator_id BIGINT       DEFAULT NULL,
+    content     CLOB         NOT NULL,
+    create_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_ticket_log_ticket_id ON ticket_log (ticket_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_log_event_type ON ticket_log (event_type);
+
+-- HTTP 请求审计日志（ticket 05） -------------------------------
+CREATE TABLE IF NOT EXISTS operation_log
+(
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    user_id     BIGINT       DEFAULT NULL,
+    username    VARCHAR(50)  NOT NULL DEFAULT '',
+    operation   VARCHAR(50)  NOT NULL DEFAULT '',
+    type        VARCHAR(20)  NOT NULL DEFAULT '',
+    method      VARCHAR(255) NOT NULL DEFAULT '',
+    params      VARCHAR(2000) NOT NULL DEFAULT '',
+    ip          VARCHAR(50)  NOT NULL DEFAULT '',
+    user_agent  VARCHAR(500) NOT NULL DEFAULT '',
+    duration_ms BIGINT       NOT NULL DEFAULT 0,
+    create_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_operation_log_user_id ON operation_log (user_id);
+CREATE INDEX IF NOT EXISTS idx_operation_log_create_time ON operation_log (create_time);

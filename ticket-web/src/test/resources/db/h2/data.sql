@@ -44,6 +44,14 @@ MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon,
     VALUES (6, 0, '字典管理', 'C', '/dicts',          'DictList',          'dict',     6, 1, 'dict:manage');
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
     VALUES (7, 0, '工单分类', 'C', '/ticket-categories', 'TicketCategoryList', 'category', 7, 1, 'category:manage');
+-- ticket 05 新增三个按钮权限点（挂在工单列表菜单 id=5 下；写操作只允许管理员）
+-- ticket:update 预留 ticket 06+，ticket 05 仍由 Service "创建人或管理员" 规则把关
+MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
+    VALUES (8, 5, '新建工单', 'F', '', '', '', 1, 1, 'ticket:create');
+MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
+    VALUES (9, 5, '修改工单', 'F', '', '', '', 2, 1, 'ticket:update');
+MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
+    VALUES (10, 5, '删除工单', 'F', '', '', '', 3, 1, 'ticket:delete');
 
 -- 角色 ↔ 菜单 ---------------------------------------------------
 -- admin：全菜单
@@ -54,6 +62,10 @@ MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 4)
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 5);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 6);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 7);
+-- ticket 05：admin 拥有 ticket:create / ticket:delete 按钮权限
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 8);
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 9);
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 10);
 -- agent：仅 dashboard + ticket
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 1);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 5);

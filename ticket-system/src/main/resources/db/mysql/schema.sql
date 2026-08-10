@@ -123,3 +123,72 @@ CREATE TABLE IF NOT EXISTS ticket_category
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='工单分类（与 AI 分类结果对齐）';
+
+-- 工单主表（ticket 05） ----------------------------------------
+-- 工单从创建到关闭的完整生命周期主记录；ticket_log 记录状态变更流水
+-- 索引设计（spec Phase 5 / 联合索引 EXPLAIN 验证留给 ticket 09）：
+--   - 单列 idx_status / idx_handler_id / idx_create_time
+--   - 联合 idx_status_handler_createtime 覆盖"我的工单"+"近期"查询
+CREATE TABLE IF NOT EXISTS ticket_info
+(
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    ticket_no   VARCHAR(30)     NOT NULL COMMENT '工单编号，格式 TK{yyyyMMdd}{9 位}（ADR-0006）',
+    title       VARCHAR(100)    NOT NULL DEFAULT '' COMMENT '工单标题',
+    content     TEXT            NOT NULL COMMENT '工单内容（详细描述）',
+    type        VARCHAR(50)     NOT NULL DEFAULT '' COMMENT '工单分类（来自 ticket_category.name，可空）',
+    priority    VARCHAR(20)     NOT NULL DEFAULT 'MEDIUM' COMMENT '优先级 HIGH / MEDIUM / LOW',
+    status      VARCHAR(20)     NOT NULL DEFAULT 'PENDING' COMMENT '状态 PENDING / PROCESSING / RESOLVED / CLOSED',
+    creator_id  BIGINT UNSIGNED NOT NULL COMMENT '创建人 sys_user.id',
+    handler_id  BIGINT UNSIGNED          DEFAULT NULL COMMENT '处理人 sys_user.id（可空）',
+    create_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    is_deleted  TINYINT         NOT NULL DEFAULT 0 COMMENT '软删标记：0 未删 / 1 已删',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_ticket_no (ticket_no),
+    KEY idx_ticket_info_status (status),
+    KEY idx_ticket_info_handler_id (handler_id),
+    KEY idx_ticket_info_create_time (create_time),
+    KEY idx_ticket_info_status_handler_createtime (status, handler_id, create_time)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='工单主表';
+
+-- 工单业务事件流水（ticket 05） --------------------------------
+-- 与 ticket_info 同事务写入（ADR-0012）；event_type 取值见 TicketEventType 枚举
+CREATE TABLE IF NOT EXISTS ticket_log
+(
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    ticket_id   BIGINT UNSIGNED NOT NULL COMMENT '工单主键 ticket_info.id',
+    event_type  VARCHAR(20)     NOT NULL COMMENT '事件类型 CREATED / UPDATED / STATUS_CHANGED / ASSIGNED / COMMENTED / AI_CALLED',
+    operator_id BIGINT UNSIGNED          DEFAULT NULL COMMENT '操作人 sys_user.id（系统事件可空）',
+    content     TEXT            NOT NULL COMMENT '事件内容（JSON 或文本）',
+    create_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_ticket_log_ticket_id (ticket_id),
+    KEY idx_ticket_log_event_type (event_type)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='工单业务事件流水';
+
+-- HTTP 请求审计日志（ticket 05） -------------------------------
+-- 由 OperationLogAspect 在 Controller 边界自动切面写入
+-- params 截断 2000 字符、user_agent 截断 500 字符
+CREATE TABLE IF NOT EXISTS operation_log
+(
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    user_id     BIGINT UNSIGNED          DEFAULT NULL COMMENT 'sys_user.id，未登录时为 null',
+    username    VARCHAR(50)     NOT NULL DEFAULT '' COMMENT 'sys_user.username，未登录时为空串',
+    operation   VARCHAR(50)     NOT NULL DEFAULT '' COMMENT '操作描述，来自 @OperationLog.value',
+    type        VARCHAR(20)     NOT NULL DEFAULT '' COMMENT '操作类型/模块，来自 @OperationLog.type',
+    method      VARCHAR(255)    NOT NULL DEFAULT '' COMMENT '方法签名 ClassName.methodName',
+    params      VARCHAR(2000)   NOT NULL DEFAULT '' COMMENT '入参 JSON 字符串，截断 2000 字符',
+    ip          VARCHAR(50)     NOT NULL DEFAULT '' COMMENT '客户端 IP',
+    user_agent  VARCHAR(500)    NOT NULL DEFAULT '' COMMENT 'User-Agent 头，截断 500 字符',
+    duration_ms BIGINT          NOT NULL DEFAULT 0 COMMENT '方法耗时毫秒',
+    create_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_operation_log_user_id (user_id),
+    KEY idx_operation_log_create_time (create_time)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='HTTP 请求审计日志';
