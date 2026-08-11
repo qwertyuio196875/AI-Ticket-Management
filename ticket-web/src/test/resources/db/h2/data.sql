@@ -52,6 +52,11 @@ MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon,
     VALUES (9, 5, '修改工单', 'F', '', '', '', 2, 1, 'ticket:update');
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
     VALUES (10, 5, '删除工单', 'F', '', '', '', 3, 1, 'ticket:delete');
+-- ticket 06 新增两个按钮权限点：ticket:assign / ticket:close（admin 专属）
+MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
+    VALUES (11, 5, '分配工单', 'F', '', '', '', 4, 1, 'ticket:assign');
+MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
+    VALUES (12, 5, '关闭工单', 'F', '', '', '', 5, 1, 'ticket:close');
 
 -- 角色 ↔ 菜单 ---------------------------------------------------
 -- admin：全菜单
@@ -62,10 +67,13 @@ MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 4)
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 5);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 6);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 7);
--- ticket 05：admin 拥有 ticket:create / ticket:delete 按钮权限
+-- ticket 05：admin 拥有 ticket:create / ticket:update / ticket:delete 按钮权限
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 8);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 9);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 10);
+-- ticket 06：admin 拥有 ticket:assign / ticket:close 按钮权限
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 11);
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 12);
 -- agent：仅 dashboard + ticket
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 1);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 5);

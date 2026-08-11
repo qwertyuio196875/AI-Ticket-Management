@@ -52,16 +52,39 @@ public enum TicketStatus {
     );
 
     /**
-     * 是否允许迁移到目标状态。
+     * 是否允许从 {@code from} 状态迁移到 {@code to} 状态（静态集中校验入口）。
+     * <p>
+     * <b>对应 ticket 06 AC #2</b>：原文要求 {@code "Static method TicketStatus.canTransitTo(TicketStatus next) returns boolean"}。
+     * 严格静态化（仅接 {@code next}）需要绑定一个隐式 {@code from}，与"集中校验每个 from × to 对"的语义不符。
+     * 这里折中：核心判定为 {@code static canTransitTo(from, to)}（AC 字面"static"），
+     * 同时保留实例方法 {@code #canTransitTo(next)} 作为便捷调用，自动绑定 {@code this}。
+     * <p>
+     * 这样：
+     * <ul>
+     *     <li>{@code TicketStatus.canTransitTo(PENDING, PROCESSING)} —— 字面 AC 的静态调用</li>
+     *     <li>{@code TicketStatus.PENDING.canTransitTo(PROCESSING)} —— 便捷实例调用</li>
+     * </ul>
      *
-     * @param next 目标状态；{@code null} 一律不允许
+     * @param from 当前状态；{@code null} 一律非法
+     * @param to   目标状态；{@code null} 一律非法
+     * @return 合法返回 true；非法返回 false
+     */
+    public static boolean canTransitTo(TicketStatus from, TicketStatus to) {
+        if (from == null || to == null) {
+            return false;
+        }
+        return TRANSITIONS.get(from).contains(to);
+    }
+
+    /**
+     * 实例便捷调用 —— 自动绑定 {@code this} 为 {@code from}，等价于
+     * {@code canTransitTo(this, next)}。
+     *
+     * @param next 目标状态
      * @return 合法返回 true；非法返回 false
      */
     public boolean canTransitTo(TicketStatus next) {
-        if (next == null) {
-            return false;
-        }
-        return TRANSITIONS.get(this).contains(next);
+        return canTransitTo(this, next);
     }
 
     /**

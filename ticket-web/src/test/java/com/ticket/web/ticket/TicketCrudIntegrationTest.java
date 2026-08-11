@@ -397,15 +397,22 @@ class TicketCrudIntegrationTest {
      * 但 sequence 用 {@link AtomicLong} 维护，按日 reset。
      * <p>
      * 只在本测试内使用。
+     * <p>
+     * <b>{@code SEQUENCES} 改为 {@code static}</b>：JUnit 5 默认每个 test method 创建
+     * 新的测试类实例 —— 本生成器实例每次重建会让 sequence 从 1 重启，与同 JVM 内
+     * 后续测试类（ticket 06+）共享 H2 时的 ticket_no 撞 {@code uk_ticket_no} 唯一索引。
+     * 改 static 后序列计数器跨实例 / 跨测试方法共享，避开唯一索引冲突。本测试类
+     * 单跑时行为与原实现等价（单类多方法时仍按日累计），对 ticket 05 验收零影响。
      */
     static class InMemoryTicketNoGenerator implements TicketNoGenerator {
-        private final Map<String, AtomicLong> sequences = new HashMap<>();
+        /** static —— 跨测试实例 / 跨测试类共享，避开 H2 uk_ticket_no 冲突 */
+        private static final Map<String, AtomicLong> SEQUENCES = new HashMap<>();
         private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
 
         @Override
         public synchronized String next() {
             String dateKey = LocalDate.now().format(DATE_FORMATTER);
-            long seq = sequences.computeIfAbsent(dateKey, k -> new AtomicLong(0)).incrementAndGet();
+            long seq = SEQUENCES.computeIfAbsent(dateKey, k -> new AtomicLong(0)).incrementAndGet();
             return "TK" + dateKey + String.format("%09d", seq);
         }
     }

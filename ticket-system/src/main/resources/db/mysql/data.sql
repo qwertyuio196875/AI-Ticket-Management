@@ -91,3 +91,19 @@ INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, componen
 -- 角色 ↔ 菜单：admin 拥有 ticket:create / ticket:update / ticket:delete
 INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
     (1, 8), (1, 9), (1, 10);
+
+-- 菜单权限点（ticket 06） ------------------------------------
+-- 工单状态机相关权限：
+--   ticket:assign —— 分配处理人（PUT /tickets/{id}/assign）
+--   ticket:close  —— 关闭工单   （POST /tickets/{id}/close）
+-- 同样挂在工单列表菜单（id=5）下作按钮；agent 不绑 —— 管理员专属
+-- 注：{@code ticket:update} 同时也是 PATCH /tickets/{id}/status 的权限串（状态变更），
+-- 避免再开 ticket:status 这种细粒度按钮 —— spec Phase 3 user story 20 由"处理人"操作，
+-- 实际企业里"改状态"和"改内容"通常一起授权
+INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) VALUES
+    (11, 5, '分配工单', 'F', '', '', '', 4, 1, 'ticket:assign'),
+    (12, 5, '关闭工单', 'F', '', '', '', 5, 1, 'ticket:close');
+
+-- 角色 ↔ 菜单：admin 拥有 ticket:assign / ticket:close
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
+    (1, 11), (1, 12);
