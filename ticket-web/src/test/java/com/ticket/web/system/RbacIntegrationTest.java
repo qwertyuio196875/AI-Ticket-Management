@@ -131,12 +131,12 @@ class RbacIntegrationTest {
     @Test
     void me_endpoint_exposes_authorities_after_rbac_is_wired() throws Exception {
         // ticket 02 阶段 authorities 为空；ticket 03 接入 sys_menu.permission 后
-        // 应该能拿到 agent_user 的 ticket:view / dashboard:view
+        // agent_user 应能拿到 dashboard:view / ticket:view；ticket 07 补 ticket:comment。
         String agentToken = loginAs("agent_user", "admin123");
         mockMvc().perform(get("/api/v1/auth/me")
                         .header("Authorization", "Bearer " + agentToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.authorities", hasSize(2)));
+                .andExpect(jsonPath("$.data.authorities", hasSize(3)));
     }
 
     // ---------- 角色列表 ----------

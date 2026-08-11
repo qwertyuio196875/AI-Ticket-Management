@@ -46,6 +46,13 @@ public enum BusinessExceptionCode {
     // ---- Ticket ---- （占位，后续 ticket 扩充）
     TICKET_NOT_FOUND("T0101", HttpStatus.NOT_FOUND, "工单不存在"),
     TICKET_INVALID_TRANSITION("T0102", HttpStatus.CONFLICT, "工单状态非法迁移"),
+    // ---- Ticket（ticket 07 补齐评论相关码）----
+    /** 工单已关闭（CLOSED）—— 不允许新增评论（ADR-0034 终态语义） */
+    TICKET_CLOSED("T0103", HttpStatus.CONFLICT, "工单已关闭，不能评论"),
+    /** 评论不存在 —— ticket_comment.id 未命中或已软删 */
+    COMMENT_NOT_FOUND("T0104", HttpStatus.NOT_FOUND, "评论不存在"),
+    /** 父评论校验失败 —— parent_id 指向不存在 / 已软删 / 不属于同一工单的评论 */
+    COMMENT_PARENT_INVALID("T0105", HttpStatus.BAD_REQUEST, "父评论不存在或不属于同一工单"),
 
     // ---- System ---- （ticket 03 补齐 RBAC 相关码）
     /** 用户不存在 —— {@code sys_user.id} 未命中 */

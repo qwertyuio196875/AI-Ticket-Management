@@ -170,6 +170,29 @@ CREATE TABLE IF NOT EXISTS ticket_log
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='工单业务事件流水';
 
+-- 工单多轮对话（ticket 07） ------------------------------------
+-- 三种 comment_type：CUSTOMER（客户）/ AGENT（客服）/ INTERNAL（内部备注）
+-- INTERNAL 仅管理员可见，列表查询时按角色过滤（ADR-0034）
+-- parent_id 支持嵌套回复；嵌套深度由业务层控制（不做无限层校验，UI 自约束）
+-- is_deleted：软删标记，列表查询一律过滤 0
+CREATE TABLE IF NOT EXISTS ticket_comment
+(
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    ticket_id   BIGINT UNSIGNED NOT NULL COMMENT '工单主键 ticket_info.id',
+    content     TEXT            NOT NULL COMMENT '回复内容（已 XSS 转义）',
+    comment_type VARCHAR(20)    NOT NULL COMMENT '评论类型 CUSTOMER / AGENT / INTERNAL',
+    creator_id  BIGINT UNSIGNED NOT NULL COMMENT '创建人 sys_user.id',
+    parent_id   BIGINT UNSIGNED          DEFAULT NULL COMMENT '父评论 id，NULL = 顶级评论',
+    create_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    is_deleted  TINYINT         NOT NULL DEFAULT 0 COMMENT '软删标记：0 未删 / 1 已删',
+    PRIMARY KEY (id),
+    KEY idx_ticket_comment_ticket_id (ticket_id),
+    KEY idx_ticket_comment_creator_id (creator_id),
+    KEY idx_ticket_comment_parent_id (parent_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='工单多轮对话';
+
 -- HTTP 请求审计日志（ticket 05） -------------------------------
 -- 由 OperationLogAspect 在 Controller 边界自动切面写入
 -- params 截断 2000 字符、user_agent 截断 500 字符

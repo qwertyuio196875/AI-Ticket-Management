@@ -57,6 +57,14 @@ MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon,
     VALUES (11, 5, '分配工单', 'F', '', '', '', 4, 1, 'ticket:assign');
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
     VALUES (12, 5, '关闭工单', 'F', '', '', '', 5, 1, 'ticket:close');
+-- ticket 07 新增评论权限点：ticket:comment（admin + agent 都可回复工单）
+MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
+    VALUES (13, 5, '回复工单', 'F', '', '', '', 6, 1, 'ticket:comment');
+-- ticket 05/06/07：service 内"管理员"判定依赖 hasAuthority("admin")，
+-- 给 admin 角色挂一个不可见的"管理员"伪菜单（permission="admin"），
+-- 实际不对应任何路由 / 按钮 —— 仅作为 admin 角色在 SecurityContext 中的 authority 标记。
+MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
+    VALUES (14, 0, '管理员标记', 'F', '', '', '', 99, 0, 'admin');
 
 -- 角色 ↔ 菜单 ---------------------------------------------------
 -- admin：全菜单
@@ -74,6 +82,11 @@ MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 10
 -- ticket 06：admin 拥有 ticket:assign / ticket:close 按钮权限
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 11);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 12);
+-- ticket 07：admin + agent 都拥有 ticket:comment（回复工单）
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 13);
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 13);
+-- ticket 07：admin 拥有 "admin" 伪 authority（service 内"管理员"判定）
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 14);
 -- agent：仅 dashboard + ticket
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 1);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 5);

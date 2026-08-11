@@ -130,6 +130,23 @@ CREATE TABLE IF NOT EXISTS ticket_log
 CREATE INDEX IF NOT EXISTS idx_ticket_log_ticket_id ON ticket_log (ticket_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_log_event_type ON ticket_log (event_type);
 
+-- 工单多轮对话（ticket 07） ------------------------------------
+CREATE TABLE IF NOT EXISTS ticket_comment
+(
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    ticket_id   BIGINT       NOT NULL,
+    content     CLOB         NOT NULL,
+    comment_type VARCHAR(20) NOT NULL,
+    creator_id  BIGINT       NOT NULL,
+    parent_id   BIGINT       DEFAULT NULL,
+    create_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted  TINYINT      NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_ticket_comment_ticket_id ON ticket_comment (ticket_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_comment_creator_id ON ticket_comment (creator_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_comment_parent_id ON ticket_comment (parent_id);
+
 -- HTTP 请求审计日志（ticket 05） -------------------------------
 CREATE TABLE IF NOT EXISTS operation_log
 (
