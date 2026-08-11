@@ -43,11 +43,24 @@ import java.util.stream.Collectors;
  * 等 HTML 特殊字符替换为实体（{@code &lt; &gt; &quot; &#x27; &amp;}）。
  * 不引入 jsoup / owasp-esapi —— 纯 static 方法足够覆盖 ticket 07 AC 范围。
  * <p>
- * <b>INTERNAL 可见性</b>：{@link #list} 按当前用户是否拥有 {@code admin} 权限
- * 决定是否隐藏 INTERNAL 评论。spec "INTERNAL comments filtered out for users
- * not in admin/internal-staff role" 在 ticket 03 已落地角色体系下，
- * 内部角色用 {@code admin} 单一字符串标识（ticket 07 范围内不引入更细粒度的
- * internal-staff 权限，避免范围蔓延）。
+ * <b>INTERNAL 可见性</b>：{@link #list} 按当前用户是否拥有 {@code ticket:comment}
+ * 权限决定是否隐藏 INTERNAL 评论。spec "INTERNAL comments filtered out for users
+ * not in admin/internal-staff role" 的语义在 ticket 03 已落地角色体系下解释为：
+ * <ul>
+ *     <li>admin 角色（id=1）拥有 {@code ticket:comment}（在 sys_menu 绑定）</li>
+ *     <li>agent 角色（id=2，"客服坐席"，即 internal-staff）也拥有 {@code ticket:comment}</li>
+ *     <li>其他角色（未分配 ticket:comment）看不到 INTERNAL 评论</li>
+ * </ul>
+ * 这样不再依赖全局的 {@code "admin"} 字符串，与权限点本身对齐。
+ * <p>
+ * <b>删除权限</b>：{@link #delete} 的"管理员"判定仍用 {@code "admin"} 字符串
+ * —— 这是 ticket 05/06 已沿用的"真正超级管理员"判定（与 INTERNAL 可见性刻意分开）。
+ * <p>
+ * <b>commentType 解析</b>：DTO 接收 {@code String}（避免 Jackson 反序列化阶段把
+ * 非法枚举值包装成 {@code HttpMessageNotReadableException} 触发 500），
+ * Service 用 {@link CommentType#fromValue(String)} 解析，非法值统一抛
+ * {@code PARAM_INVALID}（{@code C0400}），与 ticket 07 AC
+ * "comment_type must be one of 3 enum values" 对齐。
  * <p>
  * <b>不做的</b>（YAGNI）：
  * <ul>
@@ -62,8 +75,11 @@ public class TicketCommentServiceImpl implements TicketCommentService {
 
     private static final Logger log = LoggerFactory.getLogger(TicketCommentServiceImpl.class);
 
-    /** ticket 06 沿用的"管理员"权限字符串 —— 单一字符串，无多 admin 角色 */
+    /** ticket 06 沿用的"超级管理员"权限字符串 —— 严格意义上的 admin（vs INTERNAL 可见性的宽松 admin） */
     private static final String ADMIN_AUTHORITY = "admin";
+
+    /** ticket 07 "可看 INTERNAL 评论"判定 —— 拥有 ticket:comment 即 internal-staff */
+    private static final String INTERNAL_VISIBLE_AUTHORITY = "ticket:comment";
 
     private final TicketCommentMapper ticketCommentMapper;
     private final TicketInfoMapper ticketInfoMapper;
@@ -91,15 +107,15 @@ public class TicketCommentServiceImpl implements TicketCommentService {
         if (dto == null) {
             throw BusinessException.of(BusinessExceptionCode.PARAM_INVALID, "评论参数不能为空");
         }
-        if (dto.getCommentType() == null) {
-            throw BusinessException.of(BusinessExceptionCode.PARAM_INVALID, "评论类型不能为空");
-        }
         if (!StringUtils.hasText(dto.getContent())) {
             throw BusinessException.of(BusinessExceptionCode.PARAM_INVALID, "评论内容不能为空");
         }
         if (dto.getContent().length() > 2000) {
             throw BusinessException.of(BusinessExceptionCode.PARAM_INVALID, "评论内容长度不能超过 2000 字符");
         }
+        // DTO 接收 String（避免 Jackson 抛 HttpMessageNotReadableException 触发 500），
+        // Service 层用 CommentType.fromValue 解析，非法值统一抛 PARAM_INVALID
+        CommentType commentType = CommentType.fromValue(dto.getCommentType());
 
         // 1. 工单存在性 + 未软删 + 非 CLOSED
         TicketInfo ticket = ticketInfoMapper.selectById(ticketId);
@@ -122,7 +138,7 @@ public class TicketCommentServiceImpl implements TicketCommentService {
         TicketComment comment = new TicketComment();
         comment.setTicketId(ticketId);
         comment.setContent(escapeHtml(dto.getContent()));
-        comment.setCommentType(dto.getCommentType());
+        comment.setCommentType(commentType);
         comment.setCreatorId(operatorId);
         comment.setParentId(dto.getParentId());
         comment.setCreateTime(LocalDateTime.now());
@@ -159,8 +175,9 @@ public class TicketCommentServiceImpl implements TicketCommentService {
             return Collections.emptyList();
         }
 
-        // INTERNAL 可见性过滤：当前用户无 admin 权限则隐藏 INTERNAL 评论
-        boolean canSeeInternal = SecurityContextUtils.hasAuthority(ADMIN_AUTHORITY);
+        // INTERNAL 可见性过滤：拥有 ticket:comment 即视为 internal-staff（admin + agent 都持有），
+        // 与 spec "INTERNAL comments filtered out for users not in admin/internal-staff role" 对齐
+        boolean canSeeInternal = SecurityContextUtils.hasAuthority(INTERNAL_VISIBLE_AUTHORITY);
         List<TicketComment> visible = canSeeInternal
                 ? rows
                 : rows.stream()

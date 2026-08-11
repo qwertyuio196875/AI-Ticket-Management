@@ -22,8 +22,9 @@ import java.util.List;
  * 工单评论接口（ticket 07，详见 ADR-0034）。
  * <ul>
  *     <li>{@code POST   /api/v1/tickets/{id}/comments}                  —— 新增评论（需 {@code ticket:comment}）</li>
- *     <li>{@code GET    /api/v1/tickets/{id}/comments}                  —— 评论列表（需 {@code ticket:comment}；
- *         Service 层按当前用户角色过滤 INTERNAL）</li>
+ *     <li>{@code GET    /api/v1/tickets/{id}/comments}                  —— 评论列表（需 {@code ticket:view}；
+ *         读权限与写权限解耦；INTERNAL 可见性由 Service 层按
+ *         {@code ticket:comment} 判定）</li>
  *     <li>{@code DELETE /api/v1/tickets/{id}/comments/{commentId}}      —— 软删评论（需 {@code ticket:comment}；
  *         Service 层判创建者或管理员）</li>
  * </ul>
@@ -62,11 +63,11 @@ public class TicketCommentController {
     /**
      * 评论列表（按 create_time ASC）。
      * <p>
-     * Service 层按当前用户角色过滤 INTERNAL —— admin 可看全部，
-     * 其他角色看不到 INTERNAL 评论。
+     * Service 层按当前用户是否拥有 {@code ticket:comment} 决定 INTERNAL 可见性
+     * （admin / agent 都视为 internal-staff，可看全部；其他角色看不到 INTERNAL）。
      */
     @GetMapping
-    @PreAuthorize("hasAuthority('ticket:comment')")
+    @PreAuthorize("hasAuthority('ticket:view')")
     public Result<List<TicketCommentVO>> list(@PathVariable("id") Long ticketId) {
         return Result.success(ticketCommentService.list(ticketId));
     }

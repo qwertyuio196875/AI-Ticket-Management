@@ -110,8 +110,11 @@ class TicketCommentIntegrationTest {
     // ---------- INTERNAL 可见性过滤 ----------
 
     @Test
-    void internal_comment_visible_to_admin_hidden_from_non_admin() throws Exception {
+    void internal_comment_visible_to_admin_and_agent_both_see_all() throws Exception {
+        // spec 07 AC："INTERNAL comments filtered out for users not in admin/internal-staff role"
+        // —— admin 和 agent（internal-staff）都能看 INTERNAL
         String adminToken = loginAs("admin", "admin123");
+        String agentToken = loginAs("agent_user", "admin123");
         Long ticketId = createTicketAs(adminToken, Map.of("title", "内部备注", "content", "x"));
 
         // 写一条 INTERNAL 评论
@@ -123,19 +126,19 @@ class TicketCommentIntegrationTest {
                                 "commentType", "INTERNAL"))))
                 .andExpect(status().isOk());
 
-        // admin 视角：能看到
+        // admin 视角：能看到 INTERNAL
         mockMvc().perform(get(TICKETS_URL + "/" + ticketId + "/comments")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(equalTo(1)))
                 .andExpect(jsonPath("$.data[0].commentType").value(equalTo("INTERNAL")));
 
-        // agent_user 视角：INTERNAL 被过滤
-        String agentToken = loginAs("agent_user", "admin123");
+        // agent_user 视角（internal-staff）：也能看 INTERNAL
         mockMvc().perform(get(TICKETS_URL + "/" + ticketId + "/comments")
                         .header("Authorization", "Bearer " + agentToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(equalTo(0)));
+                .andExpect(jsonPath("$.data.length()").value(equalTo(1)))
+                .andExpect(jsonPath("$.data[0].commentType").value(equalTo("INTERNAL")));
     }
 
     // ---------- 嵌套回复 ----------
@@ -304,6 +307,21 @@ class TicketCommentIntegrationTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "content", "",
                                 "commentType", "CUSTOMER"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(equalTo("C0400")));
+    }
+
+    @Test
+    void post_with_invalid_comment_type_returns_400_C0400_not_500() throws Exception {
+        // 关键：非法 commentType 走 Service fromValue 抛 PARAM_INVALID（400 + C0400），
+        // 而不是被 Jackson 包成 HttpMessageNotReadableException 触发 500。
+        String token = loginAs("admin", "admin123");
+        Long ticketId = createTicketAs(token, Map.of("title", "非法类型", "content", "x"));
+
+        mockMvc().perform(post(TICKETS_URL + "/" + ticketId + "/comments")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"x\",\"commentType\":\"FOO_BAR\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(equalTo("C0400")));
     }

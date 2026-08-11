@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.ticket.common.exception.BusinessException;
 import com.ticket.common.exception.BusinessExceptionCode;
 import com.ticket.security.context.SecurityContextUtils;
-import com.ticket.security.user.LoginUser;
 import com.ticket.system.entity.SysUser;
 import com.ticket.system.mapper.SysUserMapper;
 import com.ticket.ticket.dto.TicketCommentCreateDTO;
@@ -29,18 +28,14 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -54,11 +49,12 @@ import static org.mockito.Mockito.when;
  * <p>
  * <b>覆盖</b>：
  * <ul>
- *     <li>{@code add}：参数校验（ticketId / dto / content 空 / 超长）、
+ *     <li>{@code add}：参数校验（ticketId / dto / content 空 / 超长 / 非法 commentType）、
  *         工单不存在 / CLOSED 拒绝、parent 校验（不存在 / 跨工单）、
  *         内容 XSS escape 落库、ticket_log(COMMENTED) 同事务写入</li>
  *     <li>{@code list}：ASC 排序（由 wrapper 控制）、INTERNAL 过滤
- *         （当前用户无 admin 权限时隐藏）、creatorName 拼装</li>
+ *         （无 ticket:comment 权限时隐藏 / 有 ticket:comment 时可见）、
+ *         creatorName 拼装</li>
  *     <li>{@code delete}：仅创建者 / 管理员可删、跨工单评论 / 不存在评论拒绝</li>
  *     <li>XSS 工具：5 个特殊字符的 escape 行为</li>
  * </ul>
@@ -74,8 +70,8 @@ class TicketCommentServiceImplTest {
     @InjectMocks TicketCommentServiceImpl service;
 
     private static final Long TICKET_ID = 100L;
-    private static final Long CREATOR_ID = 1L;     // 工单创建人
-    private static final Long OPERATOR_ID = 1L;    // 当前登录用户
+    private static final Long CREATOR_ID = 1L;
+    private static final Long OPERATOR_ID = 1L;
     private static final Long COMMENT_ID = 500L;
     private static final Long PARENT_ID = 499L;
 
@@ -91,8 +87,9 @@ class TicketCommentServiceImplTest {
         baseTicket.setStatus(TicketStatus.PENDING);
         baseTicket.setCreatorId(CREATOR_ID);
         baseTicket.setIsDeleted(TicketInfo.NOT_DELETED);
-        // SecurityContext 默认无 admin —— 大多数用例不应当看到 INTERNAL
+        // SecurityContext 默认无 ticket:comment / admin —— 大多数用例不应当看到 INTERNAL
         securityMock = Mockito.mockStatic(SecurityContextUtils.class, Mockito.CALLS_REAL_METHODS);
+        securityMock.when(() -> SecurityContextUtils.hasAuthority("ticket:comment")).thenReturn(false);
         securityMock.when(() -> SecurityContextUtils.hasAuthority("admin")).thenReturn(false);
     }
 
@@ -108,7 +105,6 @@ class TicketCommentServiceImplTest {
     @DisplayName("add 成功：写入 ticket_comment + ticket_log(COMMENTED) 同事务")
     void add_writes_comment_and_log() {
         when(ticketInfoMapper.selectById(TICKET_ID)).thenReturn(baseTicket);
-        // 让 insert 后 id 立刻可读
         Mockito.doAnswer(invocation -> {
             TicketComment c = invocation.getArgument(0);
             c.setId(COMMENT_ID);
@@ -117,13 +113,12 @@ class TicketCommentServiceImplTest {
 
         TicketCommentCreateDTO dto = new TicketCommentCreateDTO();
         dto.setContent("客户反馈：VPN 登录不上");
-        dto.setCommentType(CommentType.CUSTOMER);
+        dto.setCommentType("CUSTOMER");
 
         Long result = service.add(TICKET_ID, dto, OPERATOR_ID);
 
         assertThat(result).isEqualTo(COMMENT_ID);
 
-        // 校验 ticket_comment 入参
         ArgumentCaptor<TicketComment> commentCaptor = ArgumentCaptor.forClass(TicketComment.class);
         verify(ticketCommentMapper, times(1)).insert(commentCaptor.capture());
         TicketComment written = commentCaptor.getValue();
@@ -135,7 +130,6 @@ class TicketCommentServiceImplTest {
         assertThat(written.getIsDeleted()).isEqualTo(TicketComment.NOT_DELETED);
         assertThat(written.getCreateTime()).isNotNull();
 
-        // 校验 ticket_log 入参
         ArgumentCaptor<TicketLog> logCaptor = ArgumentCaptor.forClass(TicketLog.class);
         verify(ticketLogMapper, times(1)).insert(logCaptor.capture());
         TicketLog logWritten = logCaptor.getValue();
@@ -164,7 +158,7 @@ class TicketCommentServiceImplTest {
 
         TicketCommentCreateDTO dto = new TicketCommentCreateDTO();
         dto.setContent("回复上文");
-        dto.setCommentType(CommentType.AGENT);
+        dto.setCommentType("AGENT");
         dto.setParentId(PARENT_ID);
 
         service.add(TICKET_ID, dto, OPERATOR_ID);
@@ -187,7 +181,7 @@ class TicketCommentServiceImplTest {
 
         TicketCommentCreateDTO dto = new TicketCommentCreateDTO();
         dto.setContent("x");
-        dto.setCommentType(CommentType.AGENT);
+        dto.setCommentType("AGENT");
         dto.setParentId(PARENT_ID);
 
         assertThatThrownBy(() -> service.add(TICKET_ID, dto, OPERATOR_ID))
@@ -204,12 +198,12 @@ class TicketCommentServiceImplTest {
         when(ticketInfoMapper.selectById(TICKET_ID)).thenReturn(baseTicket);
         TicketComment parent = new TicketComment();
         parent.setId(PARENT_ID);
-        parent.setTicketId(999L); // 另一工单
+        parent.setTicketId(999L);
         when(ticketCommentMapper.selectById(PARENT_ID)).thenReturn(parent);
 
         TicketCommentCreateDTO dto = new TicketCommentCreateDTO();
         dto.setContent("x");
-        dto.setCommentType(CommentType.AGENT);
+        dto.setCommentType("AGENT");
         dto.setParentId(PARENT_ID);
 
         assertThatThrownBy(() -> service.add(TICKET_ID, dto, OPERATOR_ID))
@@ -226,7 +220,7 @@ class TicketCommentServiceImplTest {
 
         TicketCommentCreateDTO dto = new TicketCommentCreateDTO();
         dto.setContent("x");
-        dto.setCommentType(CommentType.CUSTOMER);
+        dto.setCommentType("CUSTOMER");
 
         assertThatThrownBy(() -> service.add(TICKET_ID, dto, OPERATOR_ID))
                 .isInstanceOf(BusinessException.class)
@@ -244,7 +238,7 @@ class TicketCommentServiceImplTest {
 
         TicketCommentCreateDTO dto = new TicketCommentCreateDTO();
         dto.setContent("x");
-        dto.setCommentType(CommentType.CUSTOMER);
+        dto.setCommentType("CUSTOMER");
 
         assertThatThrownBy(() -> service.add(TICKET_ID, dto, OPERATOR_ID))
                 .isInstanceOf(BusinessException.class)
@@ -259,7 +253,7 @@ class TicketCommentServiceImplTest {
     void add_blank_content_throws_PARAM_INVALID() {
         TicketCommentCreateDTO dto = new TicketCommentCreateDTO();
         dto.setContent("   ");
-        dto.setCommentType(CommentType.CUSTOMER);
+        dto.setCommentType("CUSTOMER");
 
         assertThatThrownBy(() -> service.add(TICKET_ID, dto, OPERATOR_ID))
                 .isInstanceOf(BusinessException.class)
@@ -273,7 +267,7 @@ class TicketCommentServiceImplTest {
     void add_overlong_content_throws_PARAM_INVALID() {
         TicketCommentCreateDTO dto = new TicketCommentCreateDTO();
         dto.setContent("a".repeat(2001));
-        dto.setCommentType(CommentType.CUSTOMER);
+        dto.setCommentType("CUSTOMER");
 
         assertThatThrownBy(() -> service.add(TICKET_ID, dto, OPERATOR_ID))
                 .isInstanceOf(BusinessException.class)
@@ -295,11 +289,24 @@ class TicketCommentServiceImplTest {
     }
 
     @Test
+    @DisplayName("add commentType 非法字符串：抛 PARAM_INVALID（C0400）")
+    void add_invalid_type_string_throws_PARAM_INVALID() {
+        TicketCommentCreateDTO dto = new TicketCommentCreateDTO();
+        dto.setContent("x");
+        dto.setCommentType("FOO_BAR");
+
+        assertThatThrownBy(() -> service.add(TICKET_ID, dto, OPERATOR_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting("code")
+                .isEqualTo(BusinessExceptionCode.PARAM_INVALID.getCode());
+    }
+
+    @Test
     @DisplayName("add ticketId 为空：抛 PARAM_INVALID")
     void add_null_ticket_id_throws_PARAM_INVALID() {
         TicketCommentCreateDTO dto = new TicketCommentCreateDTO();
         dto.setContent("x");
-        dto.setCommentType(CommentType.CUSTOMER);
+        dto.setCommentType("CUSTOMER");
 
         assertThatThrownBy(() -> service.add(null, dto, OPERATOR_ID))
                 .isInstanceOf(BusinessException.class)
@@ -319,7 +326,7 @@ class TicketCommentServiceImplTest {
 
         TicketCommentCreateDTO dto = new TicketCommentCreateDTO();
         dto.setContent("<script>alert(\"xss\")</script> & 'ok'");
-        dto.setCommentType(CommentType.AGENT);
+        dto.setCommentType("AGENT");
 
         service.add(TICKET_ID, dto, OPERATOR_ID);
 
@@ -332,8 +339,8 @@ class TicketCommentServiceImplTest {
     // ==================== list ====================
 
     @Test
-    @DisplayName("list 非 admin 视角：INTERNAL 评论被过滤")
-    void list_filters_internal_for_non_admin() {
+    @DisplayName("list 无 ticket:comment 视角：INTERNAL 评论被过滤")
+    void list_filters_internal_for_non_internal_staff() {
         TicketComment customer = newComment(COMMENT_ID, null, CommentType.CUSTOMER, 1L, 1L);
         TicketComment internal = newComment(COMMENT_ID + 1, null, CommentType.INTERNAL, 2L, 2L);
         TicketComment agent = newComment(COMMENT_ID + 2, null, CommentType.AGENT, 3L, 3L);
@@ -348,9 +355,9 @@ class TicketCommentServiceImplTest {
     }
 
     @Test
-    @DisplayName("list admin 视角：可见全部评论（含 INTERNAL）")
-    void list_admin_sees_all_comments() {
-        securityMock.when(() -> SecurityContextUtils.hasAuthority("admin")).thenReturn(true);
+    @DisplayName("list 拥有 ticket:comment 视角（admin / agent）：可见全部评论（含 INTERNAL）")
+    void list_internal_staff_sees_all_comments() {
+        securityMock.when(() -> SecurityContextUtils.hasAuthority("ticket:comment")).thenReturn(true);
         TicketComment customer = newComment(COMMENT_ID, null, CommentType.CUSTOMER, 1L, 1L);
         TicketComment internal = newComment(COMMENT_ID + 1, null, CommentType.INTERNAL, 2L, 2L);
         when(ticketCommentMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(customer, internal));
@@ -366,7 +373,7 @@ class TicketCommentServiceImplTest {
     @Test
     @DisplayName("list 拼装 creatorName：通过 sys_user.nickname 批量填充")
     void list_attaches_creator_name() {
-        securityMock.when(() -> SecurityContextUtils.hasAuthority("admin")).thenReturn(true);
+        securityMock.when(() -> SecurityContextUtils.hasAuthority("ticket:comment")).thenReturn(true);
         TicketComment c1 = newComment(COMMENT_ID, null, CommentType.CUSTOMER, 11L, 11L);
         TicketComment c2 = newComment(COMMENT_ID + 1, null, CommentType.AGENT, 22L, 22L);
         when(ticketCommentMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(c1, c2));
@@ -462,7 +469,7 @@ class TicketCommentServiceImplTest {
     @DisplayName("delete 评论跨工单：抛 COMMENT_NOT_FOUND")
     void delete_comment_belongs_to_other_ticket_throws_T0104() {
         TicketComment existing = newComment(COMMENT_ID, null, CommentType.AGENT, OPERATOR_ID, OPERATOR_ID);
-        existing.setTicketId(999L); // 另一工单
+        existing.setTicketId(999L);
         when(ticketCommentMapper.selectById(COMMENT_ID)).thenReturn(existing);
 
         assertThatThrownBy(() -> service.delete(TICKET_ID, COMMENT_ID, OPERATOR_ID))

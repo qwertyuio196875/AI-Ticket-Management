@@ -107,3 +107,22 @@ INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, componen
 -- 角色 ↔ 菜单：admin 拥有 ticket:assign / ticket:close
 INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
     (1, 11), (1, 12);
+
+-- 菜单权限点（ticket 07） ------------------------------------
+-- ticket:comment —— 工单多轮对话（POST/DELETE 写操作需要；GET 列表只需 ticket:view）
+-- admin + agent 都可回复工单
+INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) VALUES
+    (13, 5, '回复工单', 'F', '', '', '', 6, 1, 'ticket:comment');
+
+-- 角色 ↔ 菜单：admin + agent 都拥有 ticket:comment
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
+    (1, 13), (2, 13);
+
+-- 隐藏伪菜单：service 内"管理员"判定的 authority 标记
+-- 无 path / component / visible=0 —— 仅作 sys_menu 行存在，让 admin 角色在
+-- LoginUser.authorities 中出现 'admin' 串（与 ticket 05/06/07 ensureCreatorOrAdmin / admin-only delete 共用）
+INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) VALUES
+    (14, 0, '管理员标记', 'F', '', '', '', 99, 0, 'admin');
+
+-- 角色 ↔ 菜单：admin 拥有 'admin' 伪 authority
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (1, 14);
