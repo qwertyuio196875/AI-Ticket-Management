@@ -43,10 +43,12 @@ mockups/
 # 教学 workspace：本地学习记录 / 速查表 / lesson，私人学习用，不入库
 teach/
 
-# 项目内部协作文档：仅本地查阅，不入 GitHub 公开仓库
-# （CONTEXT.md 是项目上下文，docs/adr + docs/agents 是 ADR 与 agent 协作约定）
+# README.md 入版本控制（项目主文档）
+# CONTEXT.md 是项目内部词汇表，不入库
+# docs/agents/ 是 AI 协作约定（个人 AI 工具链），不入库
+# docs/ 下其他目录（adr / issues / plans）按"找实习展示用"策略选择性提交
 CONTEXT.md
-docs/
+docs/agents/
 
 # Node (if any tooling added later)
 node_modules/
