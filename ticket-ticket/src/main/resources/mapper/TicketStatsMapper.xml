@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    TicketStatsMapper SQL（ticket 10 / ADR-0033）。
+
+    4 个聚合查询对应 Dashboard 4 张图。返回类型都用 Map<String,Object>，
+    Service 层做 cast & 兜底 —— 避免因枚举 key 变化导致 MyBatis resultType 报错。
+-->
+<mapper namespace="com.ticket.ticket.mapper.TicketStatsMapper">
+
+    <!-- 状态分组：所有未软删工单 -->
+    <select id="countByStatus" resultType="java.util.HashMap">
+        SELECT status   AS status,
+               COUNT(*) AS cnt
+        FROM ticket_info
+        WHERE is_deleted = 0
+        GROUP BY status
+    </select>
+
+    <!-- 按日趋势：from（含） ~ to（含） 的新建工单数（is_deleted = 0） -->
+    <select id="countDailyTrend" resultType="java.util.HashMap">
+        SELECT DATE(create_time) AS date,
+               COUNT(*)         AS cnt
+        FROM ticket_info
+        WHERE is_deleted = 0
+          AND create_time <![CDATA[>=]]> #{from}
+          AND create_time <![CDATA[<]]> DATE_ADD(#{to}, INTERVAL 1 DAY)
+        GROUP BY DATE(create_time)
+        ORDER BY DATE(create_time) ASC
+    </select>
+
+    <!--
+        按优先级分组：所有未软删工单。
+        ticket 10 补了 idx_ticket_info_priority 单列索引（ticket-system/src/main/resources/db/mysql/schema.sql），
+        GROUP BY priority 走索引扫描（loose index scan），EXPLAIN 显示 Using index for group-by。
+    -->
+    <select id="countByPriority" resultType="java.util.HashMap">
+        SELECT priority AS priority,
+               COUNT(*) AS cnt
+        FROM ticket_info
+        WHERE is_deleted = 0
+        GROUP BY priority
+    </select>
+
+    <!--
+        TOP N 处理人：按 RESOLVED 工单数降序。
+        走 idx_ticket_info_status_handler_createtime（status='RESOLVED' + handler_id + create_time）。
+        sys_user JOIN：handler_name 拼装。
+    -->
+    <select id="topHandlersByResolved" resultType="java.util.HashMap">
+        SELECT t.handler_id    AS handlerId,
+               u.nickname      AS handlerName,
+               COUNT(*)       AS resolvedCount
+        FROM ticket_info t
+        LEFT JOIN sys_user u ON t.handler_id = u.id
+        WHERE t.is_deleted = 0
+          AND t.status = 'RESOLVED'
+          AND t.handler_id IS NOT NULL
+        GROUP BY t.handler_id, u.nickname
+        ORDER BY resolvedCount DESC, t.handler_id ASC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

@@ -147,6 +147,8 @@ CREATE TABLE IF NOT EXISTS ticket_info
     UNIQUE KEY uk_ticket_no (ticket_no),
     KEY idx_ticket_info_status (status),
     KEY idx_ticket_info_handler_id (handler_id),
+    -- ticket 10 补：priority 单列索引；让 StatsController /by-priority 的 GROUP BY priority 走索引
+    KEY idx_ticket_info_priority (priority),
     KEY idx_ticket_info_create_time (create_time),
     KEY idx_ticket_info_status_handler_createtime (status, handler_id, create_time)
 ) ENGINE = InnoDB

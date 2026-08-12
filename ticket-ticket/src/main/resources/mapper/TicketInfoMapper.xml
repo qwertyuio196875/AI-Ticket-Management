@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    TicketInfoMapper 扩展 SQL（ticket 10 / ADR-0030）。
+
+    当前仅承载一个扩展方法 listExportRows：JOIN sys_user 拼装创建人 / 处理人昵称，
+    按 TicketQueryDTO 动态条件筛选，create_time DESC + id DESC 排序（与列表页默认顺序一致）。
+
+    此处刻意不放在 TicketInfoMapper.java 同包，而作为 mapper xml 单独文件：
+    - 字段映射 resultType=TicketExportRow —— 列名 → TicketExportRow 属性名 走
+      application.yml 的 map-underscore-to-camel-case: true（creator_name → creatorName）
+    - LEFT JOIN sys_user 兼容 handler_id 为 NULL 的工单（未分配）
+
+    日期范围：dateFrom / dateTo 是 mapper 接口的顶级 @Param 参数（LocalDateTime 类型），
+    Service 层已把 TicketQueryDTO 的 LocalDate 边界归一化为 00:00:00 / 23:59:59；
+    SQL 直接 < 比较，避免 MySQL/H2 把 LocalDate 转 DATE 类型导致"今天"创建工单被漏掉。
+
+    等值过滤字段（status / priority / type / handlerId）走 query.xxx 访问 TicketQueryDTO。
+-->
+<mapper namespace="com.ticket.ticket.mapper.TicketInfoMapper">
+
+    <select id="listExportRows" resultType="com.ticket.ticket.vo.TicketExportRow">
+        SELECT
+            t.ticket_no    AS ticketNo,
+            t.title        AS title,
+            t.type         AS type,
+            t.priority     AS priority,
+            t.status       AS status,
+            c.nickname     AS creatorName,
+            h.nickname     AS handlerName,
+            t.create_time  AS createTime
+        FROM ticket_info t
+        LEFT JOIN sys_user c ON t.creator_id = c.id
+        LEFT JOIN sys_user h ON t.handler_id = h.id
+        <where>
+            t.is_deleted = 0
+            <if test="query.status != null">
+                AND t.status = #{query.status}
+            </if>
+            <if test="query.priority != null and query.priority != ''">
+                AND t.priority = #{query.priority}
+            </if>
+            <if test="query.type != null and query.type != ''">
+                AND t.type = #{query.type}
+            </if>
+            <if test="query.handlerId != null">
+                AND t.handler_id = #{query.handlerId}
+            </if>
+            <if test="dateFrom != null">
+                AND t.create_time <![CDATA[>=]]> #{dateFrom}
+            </if>
+            <if test="dateTo != null">
+                AND t.create_time <![CDATA[<=]]> #{dateTo}
+            </if>
+        </where>
+        ORDER BY t.create_time DESC, t.id DESC
+    </select>
+
+</mapper>

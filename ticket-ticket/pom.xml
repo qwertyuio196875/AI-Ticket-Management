@@ -81,6 +81,18 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
+        <!--
+            ticket 09 工单详情缓存防击穿 —— Redisson 分布式锁（RLock）。
+            与 spring-boot-starter-data-redis 共存：Redisson 复用 Lettuce 连接，
+            通过 RedissonClient Bean 提供 RLock / RBucket 等高级 API。
+            集成测试如未连接 Redis，Spring 自动装配会失败 → 测试用例须保证
+            StringRedisTemplate / RedissonClient 都可被 Mock 注入。
+        -->
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson-spring-boot-starter</artifactId>
+        </dependency>
+
         <!-- Lombok：与 ticket-system / ticket-web 一致，显式声明避免传递丢失 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -97,11 +109,54 @@
             <artifactId>ticket-ai</artifactId>
         </dependency>
 
+        <!--
+            ticket 10 —— Apache EasyExcel 工单列表导出（ADR-0030）。
+            提供 EasyExcel.write(OutputStream, Class) + CellWriteHandler 状态着色。
+        -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>easyexcel</artifactId>
+        </dependency>
+
         <!-- 测试：JUnit 5 + Mockito 由 spring-boot-starter-test 透传 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!--
+            ticket 10 —— Testcontainers Redis（集成测试）。
+            StatsCacheIntegrationTest 用真实 Redis 验证 stats service 的缓存读写 /
+            命中路径；与 ticket 09 TicketCacheIntegrationTest 同样约定：
+            默认不跑（@EnabledIfSystemProperty + -Dtest.integration=true），
+            本机无 Docker 时 CI 通过；Docker 可用时启用端到端验证。
+        -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>1.19.8</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>1.19.8</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                启用 Lombok 注解处理器 —— 详见根 pom.xml pluginManagement 注释。
+                Eclipse 通过 .factorypath 自带处理；命令行 mvn 编译必须显式声明
+                annotationProcessorPaths，否则 javac 找不到 @Data 生成的 getter / setter。
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>

@@ -45,6 +45,17 @@
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
         <jjwt.version>0.12.5</jjwt.version>
         <!--
+            ticket 10 引入：Apache EasyExcel —— ticket 列表 .xlsx 导出（ADR-0030）。
+            选 3.3.x 与 Spring Boot 3 / JDK 17 兼容（3.3+ 起基于 poi 5.x，模块化好）。
+        -->
+        <easyexcel.version>3.3.4</easyexcel.version>
+        <!--
+            Redisson 3.27.x 与 Spring Boot 3.2.x 兼容（redisson-spring-boot-starter
+            自动装配 RedissonClient Bean，无需手工 Config）。
+            ticket 09 引入：工单详情读路径 cache-aside 防击穿分布式锁。
+        -->
+        <redisson.version>3.27.2</redisson.version>
+        <!--
             Spring AI 1.x BOM —— Spring AI 1.0.0-M6 与 Spring Boot 3.2.x 兼容。
             ticket-ai 通过 spring-ai-bom 管理 spring-ai-openai-spring-boot-starter 版本。
             注意：1.0.0 GA 后 Spring AI 改了 artifact 命名（spring-ai-openai-spring-boot-starter
@@ -131,6 +142,26 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <!--
+                Redisson Spring Boot 3 starter（ticket 09 引入）。
+                自动装配 RedissonClient Bean，提供 RLock / RBucket / 等高级 Redis API。
+            -->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+
+            <!--
+                Apache EasyExcel（ticket 10 引入）—— 工单列表 Excel 导出（ADR-0030）。
+                比 Apache POI 内存友好，几万行不爆内存；写流式输出。
+            -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>easyexcel</artifactId>
+                <version>${easyexcel.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -144,6 +175,32 @@
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
+                </plugin>
+
+                <!--
+                    maven-compiler-plugin：显式启用 Lombok 注解处理器。
+                    Eclipse 通过 .factorypath 自带处理；命令行 mvn 编译必须显式声明
+                    annotationProcessorPaths，否则 javac 找不到 @Data / @Getter / @Setter
+                    生成的 getter / setter，导致 Lombok 注解类（如 SysUser / LoginUser / TicketVO）
+                    调用方编译失败（"找不到方法 getId()" 等）。
+                    强制指定 Lombok 版本（与 .factorypath 一致 = 1.18.32，兼容 JDK 21）。
+                -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>1.18.32</version>
+                            </path>
+                        </annotationProcessorPaths>
+                        <compilerArgs>
+                            <arg>-Amapstruct.defaultComponentModel=default</arg>
+                            <arg>-Amapstruct.defaultInjectionStrategy=constructor</arg>
+                        </compilerArgs>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>

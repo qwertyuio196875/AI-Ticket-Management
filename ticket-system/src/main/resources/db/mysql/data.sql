@@ -126,3 +126,13 @@ INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, componen
 
 -- 角色 ↔ 菜单：admin 拥有 'admin' 伪 authority
 INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (1, 14);
+
+-- 菜单权限点（ticket 10） ------------------------------------
+-- stats:view —— Dashboard 统计查看（4 个 /stats/tickets/* 端点）
+-- admin + agent 都可看统计
+INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) VALUES
+    (15, 1, '统计查看', 'F', '', '', '', 1, 1, 'stats:view');
+
+-- 角色 ↔ 菜单：admin + agent 都拥有 stats:view
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
+    (1, 15), (2, 15);

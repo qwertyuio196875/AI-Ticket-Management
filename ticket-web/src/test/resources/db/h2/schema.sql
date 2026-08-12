@@ -112,6 +112,8 @@ CREATE TABLE IF NOT EXISTS ticket_info
 );
 CREATE INDEX IF NOT EXISTS idx_ticket_info_status ON ticket_info (status);
 CREATE INDEX IF NOT EXISTS idx_ticket_info_handler_id ON ticket_info (handler_id);
+-- ticket 10 补：priority 单列索引；让 /api/v1/stats/tickets/by-priority 的 GROUP BY priority 走索引
+CREATE INDEX IF NOT EXISTS idx_ticket_info_priority ON ticket_info (priority);
 CREATE INDEX IF NOT EXISTS idx_ticket_info_create_time ON ticket_info (create_time);
 CREATE INDEX IF NOT EXISTS idx_ticket_info_status_handler_createtime
     ON ticket_info (status, handler_id, create_time);
