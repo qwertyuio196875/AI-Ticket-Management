@@ -22,6 +22,7 @@ import com.ticket.ticket.mapper.TicketInfoMapper;
 import com.ticket.ticket.mapper.TicketLogMapper;
 import com.ticket.ticket.service.TicketInfoService;
 import com.ticket.ticket.service.TicketNoGenerator;
+import com.ticket.ticket.service.cache.TicketCacheService;
 import com.ticket.ticket.vo.TicketVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,6 +86,7 @@ public class TicketInfoServiceImpl implements TicketInfoService {
     private final TicketNoGenerator ticketNoGenerator;
     private final TicketClassifier ticketClassifier;
     private final AIRecordPersistService aiRecordPersistService;
+    private final TicketCacheService ticketCacheService;
     private final long classifyTimeoutMs;
 
     public TicketInfoServiceImpl(TicketInfoMapper ticketInfoMapper,
@@ -92,12 +94,14 @@ public class TicketInfoServiceImpl implements TicketInfoService {
                                  TicketNoGenerator ticketNoGenerator,
                                  TicketClassifier ticketClassifier,
                                  AIRecordPersistService aiRecordPersistService,
-                                 AiProperties aiProperties) {
+                                 AiProperties aiProperties,
+                                 TicketCacheService ticketCacheService) {
         this.ticketInfoMapper = ticketInfoMapper;
         this.ticketLogMapper = ticketLogMapper;
         this.ticketNoGenerator = ticketNoGenerator;
         this.ticketClassifier = ticketClassifier;
         this.aiRecordPersistService = aiRecordPersistService;
+        this.ticketCacheService = ticketCacheService;
         this.classifyTimeoutMs = aiProperties.classifyTimeoutMs();
     }
 
@@ -292,8 +296,9 @@ public class TicketInfoServiceImpl implements TicketInfoService {
 
     @Override
     public TicketVO getById(Long id) {
-        TicketInfo entity = loadEntity(id);
-        return toVO(entity);
+        // ticket 09：读路径走 Redis cache-aside（防击穿 + 防穿透 + TTL 抖动），
+        // 委托给 TicketCacheService。详见 ADR-0004。
+        return ticketCacheService.getById(id);
     }
 
     @Override
@@ -342,6 +347,10 @@ public class TicketInfoServiceImpl implements TicketInfoService {
         ticketLog.setCreateTime(LocalDateTime.now());
         ticketLogMapper.insert(ticketLog);
 
+        // ticket 09：after-commit 失效缓存 —— 委托给 TicketCacheService.evictAfterCommit
+        // 确保只有事务成功提交后才 DEL key；事务回滚则不清缓存（避免脏 evict）
+        ticketCacheService.evictAfterCommit(existing.getId());
+
         log.info("更新工单: ticketId={}, operatorId={}", existing.getId(), operatorId);
     }
 
@@ -364,6 +373,9 @@ public class TicketInfoServiceImpl implements TicketInfoService {
             // 并发场景：被并发删了 / 被并发修改过
             throw BusinessException.of(BusinessExceptionCode.TICKET_NOT_FOUND, "工单已被其他操作修改，请刷新后重试");
         }
+
+        // ticket 09：软删后清除详情缓存（after-commit，避免脏 evict）
+        ticketCacheService.evictAfterCommit(existing.getId());
 
         log.info("软删工单: ticketId={}, operatorId={}", existing.getId(), operatorId);
     }

@@ -10,6 +10,7 @@ import com.ticket.ticket.enums.TicketEventType;
 import com.ticket.ticket.enums.TicketStatus;
 import com.ticket.ticket.mapper.TicketInfoMapper;
 import com.ticket.ticket.mapper.TicketLogMapper;
+import com.ticket.ticket.service.cache.TicketCacheService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,7 @@ class TicketStatusServiceImplTest {
     @Mock TicketInfoMapper ticketInfoMapper;
     @Mock TicketLogMapper ticketLogMapper;
     @Mock SysUserMapper sysUserMapper;
+    @Mock TicketCacheService ticketCacheService;
 
     @InjectMocks TicketStatusServiceImpl service;
 

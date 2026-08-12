@@ -11,6 +11,7 @@ import com.ticket.ticket.enums.TicketStatus;
 import com.ticket.ticket.mapper.TicketInfoMapper;
 import com.ticket.ticket.mapper.TicketLogMapper;
 import com.ticket.ticket.service.TicketStatusService;
+import com.ticket.ticket.service.cache.TicketCacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -51,13 +52,16 @@ public class TicketStatusServiceImpl implements TicketStatusService {
     private final TicketInfoMapper ticketInfoMapper;
     private final TicketLogMapper ticketLogMapper;
     private final SysUserMapper sysUserMapper;
+    private final TicketCacheService ticketCacheService;
 
     public TicketStatusServiceImpl(TicketInfoMapper ticketInfoMapper,
                                    TicketLogMapper ticketLogMapper,
-                                   SysUserMapper sysUserMapper) {
+                                   SysUserMapper sysUserMapper,
+                                   TicketCacheService ticketCacheService) {
         this.ticketInfoMapper = ticketInfoMapper;
         this.ticketLogMapper = ticketLogMapper;
         this.sysUserMapper = sysUserMapper;
+        this.ticketCacheService = ticketCacheService;
     }
 
     // ---------- changeStatus（唯一状态变更入口）----------
@@ -81,6 +85,9 @@ public class TicketStatusServiceImpl implements TicketStatusService {
 
         appendLog(ticket.getId(), TicketEventType.STATUS_CHANGED, operatorId,
                 buildStatusChangeContent(from, targetStatus, reason));
+
+        // ticket 09：after-commit 失效缓存（spec AC "after commit"）
+        ticketCacheService.evictAfterCommit(ticket.getId());
 
         this.log.info("工单状态变更: ticketId={}, from={}, to={}, operatorId={}",
                 ticket.getId(), from, targetStatus, operatorId);
@@ -135,6 +142,10 @@ public class TicketStatusServiceImpl implements TicketStatusService {
             appendLog(ticket.getId(), TicketEventType.STATUS_CHANGED, operatorId,
                     buildStatusChangeContent(TicketStatus.PENDING, TicketStatus.PROCESSING, "assign"));
         }
+
+        // ticket 09：after-commit 失效缓存（无论 handler 是否变化 / 状态是否迁移，
+        // 整笔 assign 都算 ticket_info 写操作 —— spec AC 列入 assign 必 evict）
+        ticketCacheService.evictAfterCommit(ticket.getId());
 
         this.log.info("工单分配: ticketId={}, handlerId={}, operatorId={}, handlerChanged={}, status={}",
                 ticket.getId(), handlerId, operatorId, handlerChanged, ticket.getStatus());

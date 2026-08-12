@@ -35,6 +35,13 @@ spring:
           max-tokens: 2048
           timeout: 30s
 
+  # ticket 09 —— 测试环境排除 Redisson 自动装配（避免本机无 Redis 时启动失败）。
+  # 集成测试若需要 Redis，由 TicketCacheIntegrationTest 用 Testcontainers
+  # GenericContainer 手动启动，不依赖 Spring 自动装配。
+  autoconfigure:
+    exclude:
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+
 jwt:
   secret: test-only-secret-key-for-integration-tests-32bytes+
   expire-minutes: 30
