@@ -6,8 +6,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <!--
-        ticket-ai - AI 模块（占位骨架）
-        后续 ticket（08）将引入 DeepSeek HTTP 调用封装、AI 工单分类、AI 智能回复。
+        ticket-ai - AI 模块（ticket 08 落地）。
+        Spring AI 1.x ChatClient + DeepSeek OpenAI 兼容端点；
+        对外暴露 TicketClassifier / TicketReplier 接口，
+        业务模块（ticket-ticket）只依赖接口，不感知 Spring AI 类型。
     -->
     <parent>
         <groupId>com.ticket</groupId>
@@ -19,12 +21,66 @@
     <packaging>jar</packaging>
 
     <name>ticket-ai</name>
-    <description>DeepSeek HTTP 调用 / Prompt / 结果解析</description>
+    <description>DeepSeek AI 工单分类 / 智能回复（Spring AI ChatClient 封装 + Prompt 模板 + 失败降级）</description>
 
     <dependencies>
+        <!-- 业务基础：Result / Exception / 异常码 -->
         <dependency>
             <groupId>com.ticket</groupId>
             <artifactId>ticket-common</artifactId>
+        </dependency>
+
+        <!--
+            Spring AI OpenAI starter —— Spring Boot 3 专用。
+            配置 spring.ai.openai.{api-key,base-url,chat.options.*} 即可指向 DeepSeek
+            （DeepSeek 复用 OpenAI 兼容协议；详见 ADR-0028）。
+            自动装配 ChatClient Bean。
+
+            版本号显式声明（不走 spring-ai-bom）—— 根 POM 的 BOM import
+            在本机 Eclipse m2e + Maven 组合下未正确传递到子模块 dependency，
+            显式声明最稳。版本与根 pom.xml 的 ${spring-ai.version} 保持一致。
+            当前锁定 1.0.0-M6（Maven Central 上 spring-ai-openai-spring-boot-starter
+            artifact 的最后发布版本；1.0.0 GA 后该 artifact 改名为 spring-ai-starter-model-openai）。
+        -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
+            <version>${spring-ai.version}</version>
+        </dependency>
+
+        <!--
+            spring-ai-core 提供 ChatResponse / Message / PromptTemplate 等类型；
+            显式声明便于依赖图清晰（IDE 不会误判为"未使用"）。
+        -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-core</artifactId>
+            <version>${spring-ai.version}</version>
+        </dependency>
+
+        <!--
+            MyBatis Plus 3.5（Spring Boot 3 专用 starter）——
+            ticket-ai 独立管理 ai_ticket_record 表，与 ticket-ticket / ticket-system 解耦。
+            Mapper 通过 @Mapper 注解 + BaseMapper 提供 insert / selectList。
+        -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+
+        <!--
+            Lombok：与 ticket-system / ticket-web 一致，显式声明避免传递丢失。
+        -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+
+        <!-- 测试：JUnit 5 + Mockito 由 spring-boot-starter-test 透传 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

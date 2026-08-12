@@ -176,13 +176,17 @@ class TicketCrudIntegrationTest {
         Long ticketId = objectMapper.readTree(resp).path("data").asLong();
 
         // ticket_log 应有 CREATED 事件
+        // 注：ticket 08 起创建工单会额外产生 AI_CALLED log（AI 分类的事务后业务事件），
+        // 这里断言 CREATED 一定存在，不再断言 size == 1。
         List<TicketLog> logs = ticketLogMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TicketLog>()
                         .eq(TicketLog::getTicketId, ticketId));
-        assertThat(logs).hasSize(1);
-        assertThat(logs.get(0).getEventType()).isEqualTo(TicketEventType.CREATED);
-        assertThat(logs.get(0).getOperatorId()).isEqualTo(1L); // admin
-        assertThat(logs.get(0).getContent()).contains("title=账号权限申请");
+        TicketLog createdLog = logs.stream()
+                .filter(l -> l.getEventType() == TicketEventType.CREATED)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("expected a CREATED log"));
+        assertThat(createdLog.getOperatorId()).isEqualTo(1L); // admin
+        assertThat(createdLog.getContent()).contains("title=账号权限申请");
     }
 
     @Test
@@ -207,13 +211,22 @@ class TicketCrudIntegrationTest {
                 .andExpect(status().isOk());
 
         // 3. 验证 ticket_log 多了一条 UPDATED
+        // 注：ticket 08 起创建工单会额外产生 AI_CALLED log（在 CREATED 之后、UPDATED 之前），
+        // 所以这里断言 CREATED 与 UPDATED 两个事件都存在，不再断言 size == 2。
         List<TicketLog> logs = ticketLogMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TicketLog>()
                         .eq(TicketLog::getTicketId, ticketId)
                         .orderByAsc(TicketLog::getId));
-        assertThat(logs).hasSize(2);
-        assertThat(logs.get(0).getEventType()).isEqualTo(TicketEventType.CREATED);
-        assertThat(logs.get(1).getEventType()).isEqualTo(TicketEventType.UPDATED);
+        TicketLog createdLog = logs.stream()
+                .filter(l -> l.getEventType() == TicketEventType.CREATED)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("expected a CREATED log"));
+        TicketLog updatedLog = logs.stream()
+                .filter(l -> l.getEventType() == TicketEventType.UPDATED)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("expected an UPDATED log"));
+        // UPDATED 一定在 CREATED 之后（保证顺序）
+        assertThat(updatedLog.getId()).isGreaterThan(createdLog.getId());
     }
 
     // ---------- @OperationLog 审计 ----------

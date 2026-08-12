@@ -44,6 +44,14 @@
         <!-- 三方依赖版本（Spring Boot parent 未托管的部分） -->
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
         <jjwt.version>0.12.5</jjwt.version>
+        <!--
+            Spring AI 1.x BOM —— Spring AI 1.0.0-M6 与 Spring Boot 3.2.x 兼容。
+            ticket-ai 通过 spring-ai-bom 管理 spring-ai-openai-spring-boot-starter 版本。
+            注意：1.0.0 GA 后 Spring AI 改了 artifact 命名（spring-ai-openai-spring-boot-starter
+            仅发布到 1.0.0-M6），所以锁定到 M6。后续如升级到 1.1+ / 2.x 需同步切到
+            spring-ai-starter-model-openai。
+        -->
+        <spring-ai.version>1.0.0-M6</spring-ai.version>
 
         <!-- 模块版本统一管理 -->
         <ticket-common.version>1.0.0</ticket-common.version>
@@ -110,6 +118,18 @@
                 <artifactId>jjwt-jackson</artifactId>
                 <version>${jjwt.version}</version>
                 <scope>runtime</scope>
+            </dependency>
+
+            <!--
+                Spring AI 1.x BOM —— 统一管理 spring-ai-* 系列版本。
+                ticket-ai 模块通过此 BOM 解析 spring-ai-openai-spring-boot-starter。
+            -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

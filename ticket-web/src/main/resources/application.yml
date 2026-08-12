@@ -31,6 +31,20 @@ spring:
       database: 0
       timeout: 3s
 
+  # ticket 08 启用 Spring AI —— ChatClient + DeepSeek（OpenAI 兼容协议，详见 ADR-0028）。
+  # api-key 仅取环境变量，无默认值：生产部署必须设置 DEEPSEEK_API_KEY，
+  # 否则 Spring AI 自动装配 fail-fast（避免静默用空 key 启动）。
+  ai:
+    openai:
+      api-key: ${DEEPSEEK_API_KEY}
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.3
+          max-tokens: 2048
+          timeout: 30s
+
 mybatis-plus:
   configuration:
     # 下划线字段名 → 驼峰属性名（create_time → createTime）

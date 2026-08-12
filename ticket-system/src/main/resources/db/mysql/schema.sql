@@ -215,3 +215,27 @@ CREATE TABLE IF NOT EXISTS operation_log
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='HTTP 请求审计日志';
+
+-- AI 调用记录（ticket 08） ---------------------------------------
+-- DeepSeek AI 调用的完整审计：成功结果、失败 error_log、prompt 版本号、模型
+-- ticket_id 软引用 ticket_info.id（AI 表不走同事务；缺一日志不算业务错误）
+-- call_type：CLASSIFY（创建工单时的分类）/ REPLY（智能回复）
+-- response_content 截断 4000 字符；error_log 截断 1000 字符
+CREATE TABLE IF NOT EXISTS ai_ticket_record
+(
+    id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    ticket_id        BIGINT UNSIGNED NOT NULL COMMENT '工单主键 ticket_info.id（软引用）',
+    call_type        VARCHAR(20)     NOT NULL COMMENT '调用类型 CLASSIFY / REPLY',
+    model            VARCHAR(50)     NOT NULL DEFAULT '' COMMENT '模型名，如 deepseek-chat',
+    prompt_version   VARCHAR(20)     NOT NULL DEFAULT '' COMMENT 'Prompt 版本号（v1/v2/...，留空=未启用）',
+    response_content VARCHAR(4000)   NOT NULL DEFAULT '' COMMENT 'AI 原始响应（成功为内容，失败为空），截断 4000 字符',
+    error_log        VARCHAR(1000)            DEFAULT NULL COMMENT '失败时的异常摘要（异常类名+message），成功为 NULL，截断 1000 字符',
+    success          TINYINT         NOT NULL DEFAULT 0 COMMENT '是否成功：1 成功 / 0 失败',
+    create_time      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_ai_ticket_record_ticket_id (ticket_id),
+    KEY idx_ai_ticket_record_call_type (call_type),
+    KEY idx_ai_ticket_record_create_time (create_time)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='AI 调用记录（含失败 error_log）';

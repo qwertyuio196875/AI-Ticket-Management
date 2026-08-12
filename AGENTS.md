@@ -23,7 +23,7 @@ AI智能工单管理系统（AI Ticket Management System）
 3. MyBatis Plus + MySQL 设计与优化能力
 4. Redis 缓存设计能力（防穿透 / 击穿 / 雪崩）
 5. 阿里云 OSS 文件上传能力
-6. DeepSeek AI 接口集成能力（RestTemplate）
+6. Spring AI 1.x `ChatClient` 集成能力（DeepSeek OpenAI 兼容）
 7. AOP 自定义注解能力（@OperationLog）
 8. 工单状态机 + 事件流设计能力
 
@@ -42,7 +42,7 @@ AI智能工单管理系统（AI Ticket Management System）
 - Redisson（分布式锁）
 - Apache EasyExcel（导出）
 - Knife4j（API 文档）
-- RestTemplate（DeepSeek 调用）
+- Spring AI 1.x `ChatClient`（DeepSeek 集成）
 - 阿里云 OSS SDK
 - Maven
 
@@ -58,12 +58,17 @@ AI智能工单管理系统（AI Ticket Management System）
 
 ### AI 技术
 
-直接调用 DeepSeek HTTP API（OpenAI 兼容协议），**不引入** Spring AI 框架。
+集成 **Spring AI 1.x** + **DeepSeek**（OpenAI 兼容协议）：用 `spring-ai-openai-spring-boot-starter` 配 `spring.ai.openai.base-url=https://api.deepseek.com`，业务层通过 `ChatClient.call(prompt)` 调用；HTTP 拼体 / 超时 / 重试由 Spring AI 内部托管。详见 [§十一](#十一spring-ai-模块deepseek-集成) 与 [ADR-0028](docs/adr/0028-spring-ai-deepseek-http.md)。
 
 实现：
 
-- AI 工单分类（创建工单时同步调用）
-- AI 智能回复（工单详情页触发）
+- AI 工单分类（创建工单时同步发起 + 2s 短超时降级；真结果后台落 `ai_ticket_record`）
+- AI 智能回复（工单详情页"AI 智能回复"按钮同步调用）
+
+失败降级（双层防线）：
+
+- 分类失败 → 默认 `OTHER / MEDIUM / 待人工分配`，**不阻塞工单创建**
+- 回复失败 → 内置模板回复
 
 预留：AI 知识库问答（未来 RAG）
 
@@ -78,7 +83,7 @@ ai-ticket-system/
 ├── ticket-security     ← Spring Security 配置 / JWT / 权限拦截
 ├── ticket-system       ← 用户管理 / 角色管理 / 菜单管理 / 字典管理
 ├── ticket-ticket       ← 工单 CRUD / 工单分类 / 评论 / 附件 / 状态机 / Redis 缓存 / AOP 日志
-└── ticket-ai           ← DeepSeek HTTP 调用 / Prompt / 结果解析
+└── ticket-ai           ← Spring AI ChatClient 封装 / 两个业务 interface / Prompt 模板 / 失败降级 / 落 `ai_ticket_record`
 ```
 
 ### 模块职责
@@ -122,11 +127,13 @@ ai-ticket-system/
 - EasyExcel 导出
 
 #### ticket-ai
-- DeepSeek HTTP 调用（RestTemplate）
-- AI 工单分类
-- AI 智能回复
-- AI 记录落库 `ai_ticket_record`
-- 失败降级（模板回复）
+- Spring AI 1.x `ChatClient` 封装（DeepSeek OpenAI 兼容端点）
+- 业务 interface：`TicketClassifier` + `TicketReplier`（外部模块只依赖 interface）
+- AI 工单分类（创建工单同步 + 2s 短超时降级）
+- AI 智能回复（多轮对话历史自维护 `List<Message>`）
+- Prompt 模板（`resources/prompts/*.st` + `PromptTemplate` 占位渲染）
+- AI 记录落库 `ai_ticket_record`（含 `error_log`）
+- 失败降级（双层防线：AI 层捕获 + 调用方兜底）
 
 ## 四、代码规范
 
@@ -229,7 +236,9 @@ creator_id / handler_id / create_time / update_time
 字段：id / ticket_id / file_url / file_name / size / mime_type / uploader_id / upload_time
 
 ### AI 记录表 ai_ticket_record
-字段：id / ticket_id / type / priority / department / reply_content / error_log / create_time
+字段：id / ticket_id / call_type / model / prompt_version / response_content / error_log / success / create_time
+- call_type：CLASSIFY（创建工单时自动分类）/ REPLY（智能回复）
+- success：1 成功 / 0 失败；失败时 error_log 记录异常摘要
 
 ### 功能
 
@@ -298,23 +307,59 @@ HTTP 请求维度，AOP 自动切，记录：
 - **防击穿**：Redisson 分布式锁
 - **防雪崩**：随机过期时间
 
-## 十一、Spring AI 模块（DeepSeek HTTP）
+## 十一、Spring AI 模块（DeepSeek 集成）
+
+AI 模块用 **Spring AI 1.x `ChatClient`** + **DeepSeek OpenAI 兼容协议** 实现。HTTP 拼体 / 超时 / 重试由 Spring AI 内部托管；本项目层只暴露业务 interface、Prompt 模板与失败降级。详细设计见 [ADR-0028](docs/adr/0028-spring-ai-deepseek-http.md)。
 
 ### 调用方式
-RestTemplate 直接调 `https://api.deepseek.com/chat/completions`（OpenAI 兼容协议）
+
+- Spring AI 自动注入 `ChatClient` Bean（由 `spring-ai-openai-spring-boot-starter` 提供）。
+- `DeepSeekClassifier` / `DeepSeekReplier` 内部 `chatClient.call(prompt)` 调 DeepSeek。
+- 多轮对话历史由业务层从 `ticket_comment` 表查后自维护 `List<Message>`，**不**引入 Spring AI `ChatMemory` 双层抽象。
 
 ### 配置
-`application.yml` 配 `ai.deepseek.api-key=${DEEPSEEK_API_KEY}`
 
-API Key 由开发者自己注册 DeepSeek 账号、配到环境变量。
+`application.yml`：
+
+```yaml
+spring:
+  ai:
+    openai:
+      api-key: ${DEEPSEEK_API_KEY}      # 仅环境变量，无默认值（fail-fast）
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.3
+          max-tokens: 2048
+          timeout: 30s
+```
+
+API Key 由开发者自己注册 DeepSeek 账号、配到环境变量 `DEEPSEEK_API_KEY=sk-xxxxxxxx`，**不进 Git**。自 Spring AI 1.0 GA 起，本项目从历史的 `ai.deepseek.*` 自定义字段统一迁移到 `spring.ai.openai.*`。
+
+### Prompt 管理
+
+模板放在 `ticket-ai/src/main/resources/prompts/`：
+
+- `classify.st`：工单分类 Prompt（强约束 JSON 输出：`type / priority / department`）
+- `reply.st`：工单智能回复 Prompt（工单基本信息 + 历史对话占位渲染）
+
+运行时通过 `org.springframework.ai.chat.prompt.PromptTemplate` 读取 + `${var}` 占位符替换。
 
 ### 功能
-- **AI 工单分类**：标题 + 内容 → type / priority / department
-- **AI 智能回复**：工单详情 → 排查步骤 + 解决方案
 
-### 失败降级
-- 分类失败：返回默认分类 `OTHER / MEDIUM / 待人工分配`，**不阻塞工单创建**
-- 回复失败：返回模板回复
+- **AI 工单分类**：标题 + 内容 → `TicketClassifyResult { type, priority, department }`，类型严格枚举（`NETWORK/HARDWARE/SOFTWARE/ACCOUNT/OTHER` 等）。
+- **AI 智能回复**：工单基本信息 + 多轮对话历史 → 排查思路 + 解决方案。
+
+### 同步性
+
+- 创建工单同步发起分类 + 2s 短超时降级：超时 → 默认分类立即落库，真分类结果后台落 `ai_ticket_record`。
+- AI 智能回复按钮同步调用，30s 等待上限。
+
+### 失败降级（双层防线）
+
+- **第一层**：`DeepSeekClassifier` / `DeepSeekReplier` 内部 `try-catch` 接住 Spring AI 异常 → 写 `ai_ticket_record.error_log` → 返回业务兜底值（分类 = `OTHER / MEDIUM / 待人工分配`，回复 = 模板回复）。
+- **第二层**：调用方（`ticket-ticket`）拿到兜底值后继续推进业务主流程，**不阻塞工单创建**。
 
 ## 十二、自定义注解和 AOP
 
@@ -333,7 +378,7 @@ AOP 自动记录：用户 / 方法 / 参数 / 时间。
 测试核心 Service：
 - 工单状态机迁移（各种合法 / 非法情况）
 - 工单创建 / 分配 / 关闭
-- AI 服务（mock HTTP 调用）
+- AI 服务（mock `ChatClient`，覆盖 happy / 异常 JSON / 超时降级 / 模板渲染四类路径）
 - 权限校验
 
 技术：
@@ -366,11 +411,14 @@ AOP 自动记录：用户 / 方法 / 参数 / 时间。
 - 工单多轮对话 `ticket_comment`
 - AOP `@OperationLog`
 
-### 第四阶段：AI 集成
-- DeepSeek HTTP 调用封装
-- AI 工单分类
-- AI 智能回复
-- `ai_ticket_record` 落库
+### 第四阶段：AI 集成（Spring AI 改造）
+- Spring AI 1.x `ChatClient` 封装（DeepSeek OpenAI 兼容端点）
+- 业务 interface 双拆分：`TicketClassifier` + `TicketReplier`
+- AI 工单分类（创建工单同步发起 + 2s 短超时降级）
+- AI 智能回复（多轮对话历史自维护 `List<Message>`）
+- Prompt 模板：`resources/prompts/*.st` + `PromptTemplate` 占位符渲染
+- `ai_ticket_record` 落库（含 `error_log`）
+- 失败降级双层防线 + 7 个单测用例覆盖
 
 ### 第五阶段：性能与体验
 - Redis 详情缓存

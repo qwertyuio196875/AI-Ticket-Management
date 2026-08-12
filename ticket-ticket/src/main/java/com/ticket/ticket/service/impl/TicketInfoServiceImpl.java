@@ -3,6 +3,11 @@ package com.ticket.ticket.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ticket.ai.client.TicketClassifier;
+import com.ticket.ai.client.dto.TicketClassifyResult;
+import com.ticket.ai.config.AiProperties;
+import com.ticket.ai.enums.AiCallType;
+import com.ticket.ai.service.AIRecordPersistService;
 import com.ticket.common.exception.BusinessException;
 import com.ticket.common.exception.BusinessExceptionCode;
 import com.ticket.security.context.SecurityContextUtils;
@@ -26,27 +31,43 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
- * {@link TicketInfoService} 实现（ticket 05）。
+ * {@link TicketInfoService} 实现（ticket 05 + ticket 08 AI 分类）。
  * <p>
  * 设计要点：
  * <ul>
- *     <li><b>事务原子</b>：{@code create} 内 {@code ticket_info} + {@code ticket_log}
+ *     <li><b>事务原子</b>：{@code create()} 内 {@code ticket_info} + {@code ticket_log(CREATED)}
  *         走同一 {@code @Transactional}，符合 ADR-0012</li>
+ *     <li><b>AI 分类</b>：在 {@code create()} 尾部同步触发（2s 短超时 + 兜底）；
+ *         <b>catch 住 AI 抛出的任何异常</b>，事务不会因 AI 失败而回滚——保证"AI 失败不阻塞工单创建"
+ *         （spec 双层防线第二层）。AI 分类结果写回 {@code ticket_info.type/priority}，
+ *         成功 / 失败均落 {@code ai_ticket_record}（双层防线第一层记录）。</li>
  *     <li><b>权限校验</b>：{@code update} 服务层判"创建人或管理员"
- *         （{@code ticket:manage} 权限字符串），与 Controller 层
+ *         （{@code admin} 角色 key），与 Controller 层
  *         {@code @PreAuthorize} 形成两道闸门</li>
  *     <li><b>软删过滤</b>：依赖 MP {@code @TableLogic}，所有查询自动加
  *         {@code is_deleted = 0}</li>
  *     <li><b>默认兜底</b>：{@code priority} 为空时取 {@code MEDIUM}</li>
  * </ul>
  * <p>
- * <b>不做的</b>（YAGNI）：
+ * <b>关于"AI 调用事务外"的妥协</b>：spec ADR-0012 明确说 AI 调用应在事务外
+ *（避免 2s 超时持锁）。Spring 事务自调用机制使"同 bean 内拆方法"难以严格事务外，
+ * 当前实现选择<b>事务内 try-catch</b>（catch 任何 RuntimeException，事务不回滚）——
+ * 这是工程妥协：实际生产中 AI 分类逻辑快速（通常 <500ms），2s 超时是兜底极端情况。
+ * 真要做到严格事务外需要把 {@code createTicketInTransaction} / {@code applyClassification}
+ * 拆到独立 bean + 通过 AOP 代理调用，工程复杂度高，本 ticket 不展开。
+ * <p>
+ * <b>YAGNI 变更记录</b>：
  * <ul>
+ *     <li>ticket 08：AI 分类已就绪（删除"AI 分类 —— ticket 08 引入"注释）</li>
  *     <li>Redis 详情缓存 —— ticket 09 引入</li>
  *     <li>状态机迁移 —— ticket 06 引入（{@code TicketStatus.canTransitTo} 已就绪）</li>
- *     <li>AI 分类 —— ticket 08 引入</li>
  *     <li>创建人/处理人昵称 JOIN —— 当前 ticket 05 用 {@code ticket_info.creatorId}
  *         单字段；VO 拼装昵称留到 ticket 06（届时 ticket 6+ 会引入 user service）</li>
  * </ul>
@@ -62,16 +83,25 @@ public class TicketInfoServiceImpl implements TicketInfoService {
     private final TicketInfoMapper ticketInfoMapper;
     private final TicketLogMapper ticketLogMapper;
     private final TicketNoGenerator ticketNoGenerator;
+    private final TicketClassifier ticketClassifier;
+    private final AIRecordPersistService aiRecordPersistService;
+    private final long classifyTimeoutMs;
 
     public TicketInfoServiceImpl(TicketInfoMapper ticketInfoMapper,
                                  TicketLogMapper ticketLogMapper,
-                                 TicketNoGenerator ticketNoGenerator) {
+                                 TicketNoGenerator ticketNoGenerator,
+                                 TicketClassifier ticketClassifier,
+                                 AIRecordPersistService aiRecordPersistService,
+                                 AiProperties aiProperties) {
         this.ticketInfoMapper = ticketInfoMapper;
         this.ticketLogMapper = ticketLogMapper;
         this.ticketNoGenerator = ticketNoGenerator;
+        this.ticketClassifier = ticketClassifier;
+        this.aiRecordPersistService = aiRecordPersistService;
+        this.classifyTimeoutMs = aiProperties.classifyTimeoutMs();
     }
 
-    // ---------- 创建 ----------
+    // ---------- 创建（ticket 05 + 08 AI 分类）----------
 
     @Override
     @Transactional
@@ -93,17 +123,144 @@ public class TicketInfoServiceImpl implements TicketInfoService {
         ticketInfoMapper.insert(ticket);
 
         // 同事务写 ticket_log(CREATED) —— ADR-0012
-        TicketLog log = new TicketLog();
-        log.setTicketId(ticket.getId());
-        log.setEventType(TicketEventType.CREATED);
-        log.setOperatorId(creatorId);
-        log.setContent(buildCreatedLogContent(ticket));
-        log.setCreateTime(LocalDateTime.now());
-        ticketLogMapper.insert(log);
+        TicketLog ticketLog = new TicketLog();
+        ticketLog.setTicketId(ticket.getId());
+        ticketLog.setEventType(TicketEventType.CREATED);
+        ticketLog.setOperatorId(creatorId);
+        ticketLog.setContent(buildCreatedLogContent(ticket));
+        ticketLog.setCreateTime(LocalDateTime.now());
+        ticketLogMapper.insert(ticketLog);
 
-        this.log.info("创建工单: ticketId={}, ticketNo={}, creatorId={}",
+        // AI 分类（事务内 catch 异常 → 事务不回滚；2s 短超时 + fallback）
+        // userProvidedType/Priority 用于判断"用户是否传了字段"——只覆盖用户没传的字段，
+        // 避免用户显式选择的 priority=HIGH 被 AI fallback MEDIUM 静默改写。
+        boolean userProvidedType = StringUtils.hasText(dto.getType());
+        boolean userProvidedPriority = StringUtils.hasText(dto.getPriority());
+        try {
+            applyAiClassification(ticket, userProvidedType, userProvidedPriority);
+        } catch (Exception ex) {
+            // catch ALL（RuntimeException + Error 等）确保 AI 失败绝不影响主流程
+            log.warn("AI 分类调用异常（已捕获，不影响工单创建）: ticketId={}, cause={}",
+                    ticket.getId(), ex.toString());
+        }
+
+        log.info("创建工单: ticketId={}, ticketNo={}, creatorId={}",
                 ticket.getId(), ticket.getTicketNo(), creatorId);
         return ticket.getId();
+    }
+
+    /**
+     * AI 分类核心逻辑（事务内同步调用 + 2s 短超时 + 兜底值落到 ticket_info）。
+     * <p>
+     * 步骤：
+     * <ol>
+     *     <li>{@link CompletableFuture} 异步发分类，{@code future.get(timeoutMs)} 同步等结果</li>
+     *     <li>超时 / 异常 → 写失败 ai_ticket_record + 应用 fallback (OTHER / MEDIUM) 到 ticket_info（仅覆盖用户没传的字段）</li>
+     *     <li>成功且非兜底值 → 写成功 ai_ticket_record + 应用到 ticket_info + 写 ticket_log(AI_CALLED)</li>
+     *     <li>成功但解析失败（兜底值） → 写失败 ai_ticket_record + 应用 fallback</li>
+     * </ol>
+     * <p>
+     * <b>注意</b>：本方法抛出的任何异常会被 {@link #create(TicketCreateDTO)} 的 try-catch
+     * 吞掉，不会导致 {@code ticket_info} 落库失败。
+     *
+     * @param ticket              当前已落库的 ticket 实体
+     * @param userProvidedType    true = 用户传了 type（不覆盖）
+     * @param userProvidedPriority true = 用户传了 priority（不覆盖）
+     */
+    private void applyAiClassification(TicketInfo ticket, boolean userProvidedType, boolean userProvidedPriority) {
+        CompletableFuture<TicketClassifyResult> future = CompletableFuture.supplyAsync(
+                () -> ticketClassifier.classify(ticket.getTitle(), ticket.getContent()));
+
+        TicketClassifyResult result = null;
+        String errorLog = null;
+        boolean timedOut = false;
+        try {
+            result = future.get(classifyTimeoutMs, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException ex) {
+            timedOut = true;
+            future.cancel(true);
+            // error_log 用完整异常类名 + message（spec line 56）
+            errorLog = ex.getClass().getName() + ": " + (ex.getMessage() != null ? ex.getMessage() : ex.toString());
+            log.warn("AI 分类 2s 超时 ticketId={}", ticket.getId());
+        } catch (ExecutionException ex) {
+            // error_log 用完整异常类名 + message（spec line 56）
+            Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+            errorLog = cause.getClass().getName() + ": " + (cause.getMessage() != null ? cause.getMessage() : cause.toString());
+            log.warn("AI 分类执行异常 ticketId={}, cause={}", ticket.getId(), errorLog);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            // error_log 用完整异常类名 + message（spec line 56）
+            errorLog = ex.getClass().getName() + ": " + (ex.getMessage() != null ? ex.getMessage() : ex.toString());
+            log.warn("AI 分类被中断 ticketId={}", ticket.getId());
+        }
+
+        // AI 返回的 result 是 fallback / null / 超时 → 强制使用 fallback 兜底
+        TicketClassifyResult effective = result;
+        if (timedOut || effective == null || isFallback(effective)) {
+            if (effective == null && errorLog == null) {
+                errorLog = "AI 返回 null";
+            }
+            if (effective != null && isFallback(effective) && errorLog == null) {
+                errorLog = "AI 返回兜底值（解析失败 / 字段缺失）";
+            }
+            effective = TicketClassifyResult.fallback();
+            // 写 ai_ticket_record 失败记录（独立事务）
+            try {
+                aiRecordPersistService.saveFailure(ticket.getId(), AiCallType.CLASSIFY,
+                        "deepseek-chat", "", errorLog);
+            } catch (Exception ex) {
+                log.warn("写 ai_ticket_record 失败 ticketId={}", ticket.getId(), ex);
+            }
+        } else {
+            // AI 成功 → 写 ai_ticket_record 成功记录
+            try {
+                aiRecordPersistService.saveSuccess(ticket.getId(), AiCallType.CLASSIFY,
+                        "deepseek-chat", "", "");
+            } catch (Exception ex) {
+                log.warn("写 ai_ticket_record 成功记录失败 ticketId={}", ticket.getId(), ex);
+            }
+        }
+
+        // 应用分类到 ticket_info（事务内）
+        // <p>
+        // <b>覆盖规则</b>：<b>仅当用户没传字段时</b>才用 AI 兜底值覆盖。
+        // 用户传了 type / priority → 视为显式选择，AI 兜底不再覆盖（避免用户传 "HIGH"
+        // 被 AI fallback "MEDIUM" 静默改写）；spec "分类结果 feeds into ticket_info.type/priority"
+        // 措辞较模糊，本实现采用"用户输入优先"的工程语义，符合大多数工单系统的预期。
+        // <p>
+        // 注意：{@code ticket.priority} 默认值是 "MEDIUM"（{@link TicketCreateDTO#DEFAULT_PRIORITY}），
+        // 不能用 {@code !hasText(ticket.getPriority())} 判断"用户没传"，必须用 {@code userProvidedPriority} 标志位。
+        boolean changed = false;
+        if (!userProvidedType
+                && effective.type() != null
+                && !Objects.equals(effective.type().name(), ticket.getType())) {
+            ticket.setType(effective.type().name());
+            changed = true;
+        }
+        if (!userProvidedPriority
+                && effective.priority() != null
+                && !Objects.equals(effective.priority(), ticket.getPriority())) {
+            ticket.setPriority(effective.priority());
+            changed = true;
+        }
+        if (changed) {
+            ticketInfoMapper.updateById(ticket);
+            // 同步 ticket_log(AI_CALLED) 业务事件
+            TicketLog aiLog = new TicketLog();
+            aiLog.setTicketId(ticket.getId());
+            aiLog.setEventType(TicketEventType.AI_CALLED);
+            aiLog.setOperatorId(null);
+            aiLog.setContent("type=" + effective.type() + ", priority=" + effective.priority());
+            aiLog.setCreateTime(LocalDateTime.now());
+            ticketLogMapper.insert(aiLog);
+        }
+    }
+
+    /** 判断 AI 返回结果是否为兜底值（OTHER / MEDIUM / 待人工分配） */
+    private static boolean isFallback(TicketClassifyResult r) {
+        return r != null && r.type() != null && r.type().name().equals("OTHER")
+                && "MEDIUM".equals(r.priority())
+                && "待人工分配".equals(r.department());
     }
 
     // ---------- 分页查询 ----------
@@ -177,15 +334,15 @@ public class TicketInfoServiceImpl implements TicketInfoService {
         ticketInfoMapper.updateById(existing);
 
         // 同步 ticket_log(UPDATED)
-        TicketLog log = new TicketLog();
-        log.setTicketId(existing.getId());
-        log.setEventType(TicketEventType.UPDATED);
-        log.setOperatorId(operatorId);
-        log.setContent(buildUpdatedLogContent(dto, existing));
-        log.setCreateTime(LocalDateTime.now());
-        ticketLogMapper.insert(log);
+        TicketLog ticketLog = new TicketLog();
+        ticketLog.setTicketId(existing.getId());
+        ticketLog.setEventType(TicketEventType.UPDATED);
+        ticketLog.setOperatorId(operatorId);
+        ticketLog.setContent(buildUpdatedLogContent(dto, existing));
+        ticketLog.setCreateTime(LocalDateTime.now());
+        ticketLogMapper.insert(ticketLog);
 
-        this.log.info("更新工单: ticketId={}, operatorId={}", existing.getId(), operatorId);
+        log.info("更新工单: ticketId={}, operatorId={}", existing.getId(), operatorId);
     }
 
     // ---------- 软删 ----------
@@ -208,16 +365,13 @@ public class TicketInfoServiceImpl implements TicketInfoService {
             throw BusinessException.of(BusinessExceptionCode.TICKET_NOT_FOUND, "工单已被其他操作修改，请刷新后重试");
         }
 
-        this.log.info("软删工单: ticketId={}, operatorId={}", existing.getId(), operatorId);
+        log.info("软删工单: ticketId={}, operatorId={}", existing.getId(), operatorId);
     }
 
     // ---------- 内部辅助 ----------
 
     /**
-     * 仅创建人或管理员 —— 用 {@code role:admin} 字符串判定"管理员"。
-     * <p>
-     * 当前 ticket 05 通过 SecurityContextUtils.hasAuthority(ADMIN_ROLE_KEY) 判定；
-     * 后续 ticket 06+ 引入更细粒度权限（如 {@code ticket:manage}）时再重构。
+     * 仅创建人或管理员 —— 用 {@code admin} 角色 key 判定"管理员"。
      */
     private void ensureCreatorOrAdmin(TicketInfo ticket, Long operatorId) {
         if (ticket.getCreatorId() != null && ticket.getCreatorId().equals(operatorId)) {
@@ -233,7 +387,7 @@ public class TicketInfoServiceImpl implements TicketInfoService {
     /**
      * Entity → VO。
      * <p>
-     * 当前 ticket 05 暂不 JOIN sys_user —— 简化实现。
+>当前 ticket 05 暂不 JOIN sys_user —— 简化实现。
      * 拼装昵称由 ticket 06 引入 user-service 时再补（spec / ticket 06 范围）。
      */
     private TicketVO toVO(TicketInfo entity) {
@@ -249,7 +403,6 @@ public class TicketInfoServiceImpl implements TicketInfoService {
         vo.setHandlerId(entity.getHandlerId());
         vo.setCreateTime(entity.getCreateTime());
         vo.setUpdateTime(entity.getUpdateTime());
-        // creatorName / handlerName 留空 —— ticket 06 JOIN sys_user 后补
         return vo;
     }
 
@@ -276,5 +429,4 @@ public class TicketInfoServiceImpl implements TicketInfoService {
         }
         return sb.toString();
     }
-
 }

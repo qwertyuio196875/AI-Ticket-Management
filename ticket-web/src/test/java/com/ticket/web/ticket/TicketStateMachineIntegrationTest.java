@@ -109,13 +109,20 @@ class TicketStateMachineIntegrationTest {
         assertThat(afterAssign.getHandlerId()).isEqualTo(3L);
 
         List<TicketLog> logsAfterAssign = logsFor(ticketId);
-        assertThat(logsAfterAssign).hasSize(3); // CREATED + ASSIGNED + STATUS_CHANGED
-        assertThat(logsAfterAssign.get(1).getEventType()).isEqualTo(TicketEventType.ASSIGNED);
-        assertThat(logsAfterAssign.get(1).getContent())
+        // ticket 08 起创建工单会额外产生 AI_CALLED log（在 CREATED 之后、ASSIGNED 之前），
+        // 这里不再断言 size == 3，而是断言 ASSIGNED + STATUS_CHANGED 事件存在。
+        TicketLog assignedLog = logsAfterAssign.stream()
+                .filter(l -> l.getEventType() == TicketEventType.ASSIGNED)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("expected an ASSIGNED log"));
+        assertThat(assignedLog.getContent())
                 .contains("handlerId=3")
                 .contains("reason=分配给 agent_user");
-        assertThat(logsAfterAssign.get(2).getEventType()).isEqualTo(TicketEventType.STATUS_CHANGED);
-        assertThat(logsAfterAssign.get(2).getContent())
+        TicketLog statusChangedAfterAssign = logsAfterAssign.stream()
+                .filter(l -> l.getEventType() == TicketEventType.STATUS_CHANGED)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("expected a STATUS_CHANGED log"));
+        assertThat(statusChangedAfterAssign.getContent())
                 .contains("from=PENDING").contains("to=PROCESSING");
 
         // 3. 标记解决：PATCH /status with target=RESOLVED
@@ -131,8 +138,13 @@ class TicketStateMachineIntegrationTest {
         assertThat(afterResolve.getStatus()).isEqualTo(TicketStatus.RESOLVED);
 
         List<TicketLog> logsAfterResolve = logsFor(ticketId);
-        assertThat(logsAfterResolve.get(3).getEventType()).isEqualTo(TicketEventType.STATUS_CHANGED);
-        assertThat(logsAfterResolve.get(3).getContent())
+        // ticket 08 起 ticket_log 多一条 AI_CALLED，索引不再固定；改为按 event type 查找。
+        TicketLog resolvedLog = logsAfterResolve.stream()
+                .filter(l -> l.getEventType() == TicketEventType.STATUS_CHANGED
+                        && l.getContent().contains("to=RESOLVED"))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("expected a STATUS_CHANGED log to RESOLVED"));
+        assertThat(resolvedLog.getContent())
                 .contains("from=PROCESSING").contains("to=RESOLVED").contains("reason=已解决");
 
         // 4. 关闭工单：POST /close
@@ -144,9 +156,12 @@ class TicketStateMachineIntegrationTest {
         assertThat(afterClose.getStatus()).isEqualTo(TicketStatus.CLOSED);
 
         List<TicketLog> logsAfterClose = logsFor(ticketId);
-        assertThat(logsAfterClose).hasSize(5); // + STATUS_CHANGED (close)
-        TicketLog closeLog = logsAfterClose.get(4);
-        assertThat(closeLog.getEventType()).isEqualTo(TicketEventType.STATUS_CHANGED);
+        // ticket 08 起 ticket_log 多一条 AI_CALLED，索引不再固定；改为按 event + content 查找。
+        TicketLog closeLog = logsAfterClose.stream()
+                .filter(l -> l.getEventType() == TicketEventType.STATUS_CHANGED
+                        && l.getContent().contains("to=CLOSED"))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("expected a STATUS_CHANGED log to CLOSED"));
         assertThat(closeLog.getContent())
                 .contains("from=RESOLVED").contains("to=CLOSED").contains("reason=closed");
     }

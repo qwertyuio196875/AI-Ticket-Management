@@ -87,6 +87,16 @@
             <artifactId>lombok</artifactId>
         </dependency>
 
+        <!--
+            ticket-ai：Spring AI ChatClient 封装 + 工单分类接口（ticket 08）。
+            依赖 TicketClassifier / AIRecordPersistService / AiProperties，
+            实现 AI 分类同步调用（2s 超时） + 事务外 ai_ticket_record 落库。
+        -->
+        <dependency>
+            <groupId>com.ticket</groupId>
+            <artifactId>ticket-ai</artifactId>
+        </dependency>
+
         <!-- 测试：JUnit 5 + Mockito 由 spring-boot-starter-test 透传 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

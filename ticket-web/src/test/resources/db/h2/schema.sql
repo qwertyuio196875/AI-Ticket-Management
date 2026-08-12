@@ -165,3 +165,22 @@ CREATE TABLE IF NOT EXISTS operation_log
 );
 CREATE INDEX IF NOT EXISTS idx_operation_log_user_id ON operation_log (user_id);
 CREATE INDEX IF NOT EXISTS idx_operation_log_create_time ON operation_log (create_time);
+
+-- AI 调用记录（ticket 08） ---------------------------------------
+-- 与主库 ai_ticket_record 结构一致；H2 没有 VARCHAR(4000)，用 CLOB 替代
+CREATE TABLE IF NOT EXISTS ai_ticket_record
+(
+    id               BIGINT       NOT NULL AUTO_INCREMENT,
+    ticket_id        BIGINT       NOT NULL,
+    call_type        VARCHAR(20)  NOT NULL,
+    model            VARCHAR(50)  NOT NULL DEFAULT '',
+    prompt_version   VARCHAR(20)  NOT NULL DEFAULT '',
+    response_content CLOB         NOT NULL DEFAULT '',
+    error_log        VARCHAR(1000) DEFAULT NULL,
+    success          TINYINT      NOT NULL DEFAULT 0,
+    create_time      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_ai_ticket_record_ticket_id ON ai_ticket_record (ticket_id);
+CREATE INDEX IF NOT EXISTS idx_ai_ticket_record_call_type ON ai_ticket_record (call_type);
+CREATE INDEX IF NOT EXISTS idx_ai_ticket_record_create_time ON ai_ticket_record (create_time);

@@ -21,6 +21,20 @@ spring:
       schema-locations: classpath:db/h2/schema.sql
       data-locations: classpath:db/h2/data.sql
 
+  # ticket 08 —— 集成测试环境的 Spring AI 配置。
+  # 测试机无真实 DeepSeek key，使用 fake key 让 Spring AI 自动装配通过；
+  # 真正调用由 TicketAiTestConfig.@Primary ChatClient mock 接管，避免任何真实 HTTP 请求。
+  ai:
+    openai:
+      api-key: sk-test-fake-key-for-integration-tests-only
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.3
+          max-tokens: 2048
+          timeout: 30s
+
 jwt:
   secret: test-only-secret-key-for-integration-tests-32bytes+
   expire-minutes: 30

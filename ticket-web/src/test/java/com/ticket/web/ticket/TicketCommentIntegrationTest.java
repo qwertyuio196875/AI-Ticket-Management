@@ -99,10 +99,16 @@ class TicketCommentIntegrationTest {
                 .andExpect(jsonPath("$.data[0].content").value(equalTo("&lt;script&gt;alert(1)&lt;/script&gt;")));
 
         // ticket_log 应当写一条 COMMENTED
+        // 注：ticket 08 起创建工单会额外产生一条 AI_CALLED log（AI 分类的事务后业务事件流），
+        // 所以这里断言 >= 2 而不是 == 2。COMMENTED 事件一定存在，但位置不一定在 index 1
+        // （按 createTime 排序，AI_CALLED 在 CREATED 之后、COMMENTED 之前）。
         List<TicketLog> logs = logsFor(ticketId);
-        assertThat(logs).hasSize(2); // CREATED + COMMENTED
-        assertThat(logs.get(1).getEventType()).isEqualTo(TicketEventType.COMMENTED);
-        assertThat(logs.get(1).getContent())
+        assertThat(logs.size()).isGreaterThanOrEqualTo(2);
+        TicketLog commentedLog = logs.stream()
+                .filter(l -> l.getEventType() == TicketEventType.COMMENTED)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("expected a COMMENTED log"));
+        assertThat(commentedLog.getContent())
                 .contains("commentId=" + commentId)
                 .contains("commentType=CUSTOMER");
     }
