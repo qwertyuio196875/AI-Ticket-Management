@@ -24,6 +24,16 @@ public interface TicketCategoryService {
     List<TicketCategory> listAllEnabled();
 
     /**
+     * 查询全部工单分类（含禁用）—— 分类管理页 CRUD 用（ticket 14）。
+     * <p>
+     * 与 {@link #listAllEnabled()} 的区别：不做 {@code status} 过滤，
+     * 禁用项也返回（否则停用后无法在管理页再启用）。
+     *
+     * @return 全量条目（含 status=0），按 sort 升序、同 sort 按 id 升序
+     */
+    List<TicketCategory> listAll();
+
+    /**
      * 按 id 查询详情。
      *
      * @param id 主键

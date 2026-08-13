@@ -32,7 +32,57 @@ export const routes: RouteRecordRaw[] = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('../views/DashboardView.vue'),
-        meta: { title: '工作台', requiresAuth: true, permissions: ['dashboard:view'] },
+        meta: { title: '工作台', requiresAuth: true, permissions: ['stats:view'] },
+      },
+      // 工单域：create 声明在 :id 之前，避免 create 被当成参数
+      {
+        path: 'tickets',
+        name: 'TicketList',
+        component: () => import('../views/TicketListView.vue'),
+        meta: { title: '工单列表', requiresAuth: true, permissions: ['ticket:view'] },
+      },
+      {
+        path: 'tickets/create',
+        name: 'TicketCreate',
+        component: () => import('../views/TicketCreateView.vue'),
+        meta: { title: '新建工单', requiresAuth: true, permissions: ['ticket:create'] },
+      },
+      {
+        path: 'tickets/:id',
+        name: 'TicketDetail',
+        component: () => import('../views/TicketDetailView.vue'),
+        meta: { title: '工单详情', requiresAuth: true, permissions: ['ticket:view'] },
+      },
+      // 系统管理域
+      {
+        path: 'system/users',
+        name: 'UserManage',
+        component: () => import('../views/UserManageView.vue'),
+        meta: { title: '用户管理', requiresAuth: true, permissions: ['user:manage'] },
+      },
+      {
+        path: 'system/roles',
+        name: 'RoleManage',
+        component: () => import('../views/RoleManageView.vue'),
+        meta: { title: '角色管理', requiresAuth: true, permissions: ['role:manage'] },
+      },
+      {
+        path: 'system/menus',
+        name: 'MenuManage',
+        component: () => import('../views/MenuManageView.vue'),
+        meta: { title: '菜单管理', requiresAuth: true, permissions: ['menu:manage'] },
+      },
+      {
+        path: 'system/dicts',
+        name: 'DictManage',
+        component: () => import('../views/DictManageView.vue'),
+        meta: { title: '数据字典', requiresAuth: true, permissions: ['dict:manage'] },
+      },
+      {
+        path: 'system/ticket-categories',
+        name: 'TicketCategoryManage',
+        component: () => import('../views/TicketCategoryView.vue'),
+        meta: { title: '工单分类', requiresAuth: true, permissions: ['category:manage'] },
       },
     ],
   },

@@ -171,7 +171,7 @@ aspect
 所有接口统一格式：
 ```json
 {
-  "code": 200,
+  "code": "200",
   "message": "success",
   "data": {}
 }

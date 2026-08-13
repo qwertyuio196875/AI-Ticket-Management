@@ -60,6 +60,26 @@ class TicketCategoryServiceImplTest {
         assertThat(captor.getValue()).isNotNull();
     }
 
+    // ---------- listAll ----------
+
+    @Test
+    void listAll_returns_all_categories_without_status_filter() {
+        TicketCategory c1 = category(1L, "系统故障", "desc-1", 1);
+        TicketCategory c2 = category(2L, "网络问题", "desc-2", 2);
+        TicketCategory c3 = category(3L, "已停用分类", "desc-3", 3);
+        c3.setStatus(TicketCategory.STATUS_DISABLED);
+        when(categoryMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(c1, c2, c3));
+
+        List<TicketCategory> result = service.listAll();
+
+        // 全量（含禁用）：mock mapper 不执行 SQL 过滤，"不含 status 过滤 + sort 排序"
+        // 由实现构造的 wrapper 保证（集成测试走真实 SQL 验证）
+        assertThat(result).hasSize(3);
+        ArgumentCaptor<LambdaQueryWrapper<TicketCategory>> captor = newClassCaptor();
+        verify(categoryMapper, org.mockito.Mockito.times(1)).selectList(captor.capture());
+        assertThat(captor.getValue()).isNotNull();
+    }
+
     // ---------- getById ----------
 
     @Test
