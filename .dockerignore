@@ -1,0 +1,24 @@
+# =============================================================
+# Docker 构建上下文排除清单（ticket 15）
+#
+# 说明：排除 target/ 时保留 ticket-web 的 fat jar ——
+# Dockerfile 需要 COPY 它进镜像（见下方 ! 例外规则）。
+# =============================================================
+
+# Maven 构建产物（仅重新包含入口 fat jar 供 COPY）
+**/target/*
+!ticket-web/target/ticket-web-1.0.0.jar
+
+# 前端依赖与构建产物
+**/node_modules/
+**/dist/
+
+# VCS 与 IDE
+.git/
+.idea/
+*.iml
+
+# 设计稿 / 需求文档 / 文档（不进运行时镜像）
+mockups/
+.scratch/
+docs/

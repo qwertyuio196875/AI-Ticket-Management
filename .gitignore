@@ -45,10 +45,14 @@ teach/
 
 # README.md 入版本控制（项目主文档）
 # CONTEXT.md 是项目内部词汇表，不入库
-# docs/ 是内部协作文档（adr / agents / plans / PROJECT-STRUCTURE），仅本地保留，不入远程仓库
+# docs/ 内部协作文档（adr / agents / plans）仅本地保留；
+# ticket 15 的交付物（部署 runbook / 测试摘要 / 简历描述 / README 截图）作为最终项目文档入版本控制
 CONTEXT.md
-docs/
-!docs/
+docs/*
+!docs/deployment/
+!docs/deployment/aliyun-ecs.md
+!docs/test-summary.md
+!docs/resume-project-description.md
 !docs/images/
 !docs/images/architecture.png
 !docs/images/state-machine.png

@@ -2,6 +2,14 @@
 
 > 基于 Spring Boot 3 + Vue 3 + DeepSeek 的企业级单体工单管理系统，集成 AI 实现工单自动分类与智能回复辅助。
 
+## 界面截图
+
+### 登录页
+![登录页](docs/images/screenshot-login.png)
+
+### 统计 Dashboard
+![统计 Dashboard](docs/images/screenshot-dashboard.png)
+
 ## 📖 项目简介
 
 本项目面向企业内部员工的报障场景，解决「工单流程冗长、分类依赖人工、客服响应慢」的问题。系统覆盖工单**创建 → 智能分类 → 分配 → 多轮对话 → 解决 → 关闭**的全生命周期，并基于 DeepSeek 实现创建时的自动分类与详情页的 AI 智能回复建议，AI 失败**双层降级**不阻塞主流程。
@@ -167,3 +175,11 @@ docker run -d --name ai-ticket -p 8080:8080 \
 本项目是我为准备**第一次实习面试**而独立设计并实现，旨在展示**后端工程能力与 AI 集成实践**。
 
 - 技术亮点：Spring AI 集成 + 双层降级 / 工单状态机 + 业务事件流 / Redis 三层缓存防护 / AOP 自定义注解审计 / 两层 RBAC + JWT 黑名单 / MySQL 联合索引 EXPLAIN 验证 / Vue 3 自研 `v-permission` 指令 / Playwright E2E
+
+## 相关文档
+
+- [docs/deployment/aliyun-ecs.md](docs/deployment/aliyun-ecs.md)：阿里云 ECS 部署手册
+- [docs/test-summary.md](docs/test-summary.md)：测试摘要
+- [docs/resume-project-description.md](docs/resume-project-description.md)：简历项目描述
+
+> 注：`CONTEXT.md`（领域词汇表）与 `docs/adr/`（架构决策记录）为本地协作文档，未纳入版本控制。
