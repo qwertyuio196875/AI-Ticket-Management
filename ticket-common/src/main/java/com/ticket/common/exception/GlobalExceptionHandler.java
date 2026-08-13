@@ -77,17 +77,18 @@ public class GlobalExceptionHandler {
 
     /**
      * 文件大小超过上限 — Spring multipart 在请求解析阶段抛 {@link MaxUploadSizeExceededException}
-     * （ticket 12：{@code spring.servlet.multipart.max-file-size=50MB} 触发）。
+     * （ticket 12：{@code spring.servlet.multipart.max-file-size} 触发）。
      * <p>
-     * 统一返回 400 + 中文提示，与 {@link com.ticket.ticket.oss.OssFileValidator}
-     * 的大小校验文案保持一致（双防线：先由容器拦截超限请求，业务校验兜底）。
+     * 统一返回 400 + 中文提示。文案刻意<b>不写具体数值</b>：容器上限在 ticket-web 配置、
+     * 业务校验（{@code OssFileValidator}）在 ticket-ticket 模块，两者分属不同模块
+     * 无法共享常量，写死数字会导致人肉同步漂移（改配置忘改文案 / 反之亦然）。
      */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Result<Void>> handleMaxUploadSize(MaxUploadSizeExceededException ex,
                                                             HttpServletRequest request) {
         log.warn("MaxUploadSizeExceeded at [{} {}]: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
         BusinessExceptionCode source = BusinessExceptionCode.PARAM_INVALID;
-        return respond(source, source.getCode(), "文件大小不能超过 50MB");
+        return respond(source, source.getCode(), "上传文件大小超出限制，请压缩后重试");
     }
 
     /**

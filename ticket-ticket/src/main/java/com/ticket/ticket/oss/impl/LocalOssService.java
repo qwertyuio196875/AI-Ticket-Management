@@ -3,6 +3,7 @@ package com.ticket.ticket.oss.impl;
 import com.ticket.common.exception.BusinessException;
 import com.ticket.common.exception.BusinessExceptionCode;
 import com.ticket.ticket.oss.OssFileValidator;
+import com.ticket.ticket.oss.OssObjectKey;
 import com.ticket.ticket.oss.OssProperties;
 import com.ticket.ticket.oss.OssService;
 import org.slf4j.Logger;
@@ -15,10 +16,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
-import java.util.UUID;
 
 /**
  * 本地文件降级存储实现（ticket 12 AC：无阿里云账号时开发环境可用）。
@@ -40,9 +37,6 @@ public class LocalOssService implements OssService {
 
     private static final Logger log = LoggerFactory.getLogger(LocalOssService.class);
 
-    private static final String KEY_PREFIX = "ticket/";
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
-
     private final OssProperties properties;
 
     public LocalOssService(OssProperties properties) {
@@ -53,7 +47,7 @@ public class LocalOssService implements OssService {
     public String upload(MultipartFile file) {
         // 大小 / mime 白名单校验，失败抛 PARAM_INVALID（C0400）
         OssFileValidator.validate(file);
-        String key = buildKey(file.getOriginalFilename());
+        String key = localPrefix() + OssObjectKey.buildKey(OssObjectKey.extractExtension(file.getOriginalFilename()));
         Path target = Path.of(key);
         try {
             Files.createDirectories(target.getParent());
@@ -82,7 +76,14 @@ public class LocalOssService implements OssService {
     /**
      * 本地降级模式无签名机制 —— 直接返回本地文件路径（仅开发 / 测试环境使用）。
      * <p>
-     * Javadoc 说明：业务侧拿到的是文件系统绝对路径，生产环境不得以该实现上线。
+     * 注意：返回值是 <b>本地文件系统路径</b>（{@code file_url} 列本地模式存的
+     * 含 {@code localPath} 前缀的路径本身），<b>不是 HTTP URL</b>，浏览器不能直接访问；
+     * 生产环境必须启用真实 OSS（{@code aliyun.oss.enabled=true}），此时
+     * {@code file_url} 存对象 key（{@code ticket/...}），本实现不得上线。
+     * <p>
+     * <b>file_url 双语义</b>：OSS 模式存对象 key、本地降级模式存含
+     * {@code localPath} 前缀的本地路径，两种语义由 {@code enabled} 开关决定，
+     * 业务层（{@code TicketAttachmentService}）无需感知。
      */
     @Override
     public String getSignedUrl(String fileKey, Duration ttl) {
@@ -90,31 +91,14 @@ public class LocalOssService implements OssService {
     }
 
     /**
-     * 组装本地 key：{@code {localPath}/ticket/{yyyyMMdd}/{uuid32}[.{ext}]}。
+     * 本地根目录（含结尾分隔符）—— 与 {@link OssObjectKey} 产出的相对 key 拼接。
      * <p>
      * 用 {@code '/'} 拼接，跨平台一致；{@link Path#of(String)} 在 Windows 上
      * 同样能解析混合分隔符路径。
      */
-    private String buildKey(String originalFilename) {
-        String base = properties.getLocalPath().endsWith("/") || properties.getLocalPath().endsWith("\\")
+    private String localPrefix() {
+        return properties.getLocalPath().endsWith("/") || properties.getLocalPath().endsWith("\\")
                 ? properties.getLocalPath()
                 : properties.getLocalPath() + "/";
-        String date = LocalDate.now().format(DATE_FORMAT);
-        String uuid = UUID.randomUUID().toString().replace("-", "");
-        String ext = extractExtension(originalFilename);
-        return ext.isEmpty()
-                ? base + KEY_PREFIX + date + "/" + uuid
-                : base + KEY_PREFIX + date + "/" + uuid + "." + ext;
-    }
-
-    private String extractExtension(String originalFilename) {
-        if (originalFilename == null) {
-            return "";
-        }
-        int dot = originalFilename.lastIndexOf('.');
-        if (dot < 0 || dot == originalFilename.length() - 1) {
-            return "";
-        }
-        return originalFilename.substring(dot + 1).toLowerCase(Locale.ROOT);
     }
 }

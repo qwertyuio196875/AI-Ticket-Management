@@ -111,19 +111,6 @@ class TicketAttachmentServiceImplTest {
     }
 
     @Test
-    @DisplayName("upload 工单已关闭：抛 TICKET_CLOSED(T0103)，不调 ossService")
-    void upload_closed_ticket_throws_T0103() {
-        baseTicket.setStatus(TicketStatus.CLOSED);
-        when(ticketInfoMapper.selectById(TICKET_ID)).thenReturn(baseTicket);
-
-        assertThatThrownBy(() -> service.upload(TICKET_ID, new MockMultipartFile("f", new byte[0]), OPERATOR_ID))
-                .isInstanceOf(BusinessException.class)
-                .extracting("code")
-                .isEqualTo(BusinessExceptionCode.TICKET_CLOSED.getCode());
-        verify(ossService, never()).upload(any());
-    }
-
-    @Test
     @DisplayName("upload 成功：ossService.upload 得到 key → 落库字段正确 → VO 带 downloadUrl")
     void upload_success_persists_metadata() {
         when(ticketInfoMapper.selectById(TICKET_ID)).thenReturn(baseTicket);

@@ -10,7 +10,7 @@ import java.util.List;
  * <p>
  * <b>职责边界</b>：所有 {@code ticket_attachment} 写操作必须经本接口。Service 层负责：
  * <ul>
- *     <li>工单存在性 + 状态校验（CLOSED 不允许上传）</li>
+ *     <li>工单存在性校验（不存在 → 抛 {@code T0101}）</li>
  *     <li>调用 {@code OssService} 上传 / 删除对象（存储层与业务解耦，见 ADR-0014）</li>
  *     <li>附件元数据落库（{@code file_url} 存存储 key）与软删（{@code is_deleted = 1}）</li>
  *     <li>列表查询按 {@code upload_time ASC} 返回，逐项生成签名下载 URL</li>
@@ -25,7 +25,7 @@ public interface TicketAttachmentService {
     /**
      * 上传附件（ticket 12 AC）。
      * <p>
-     * 流程：校验工单存在 + 未软删 + 状态非 CLOSED（不满足 → 抛 {@code T0101} / {@code T0103}）
+     * 流程：校验工单存在（不存在 → 抛 {@code T0101}）
      * → {@code OssService.upload(file)}（内部做大小 / mime 白名单校验，失败抛 {@code C0400} 或 {@code A0201}）
      * → 落 {@code ticket_attachment} 元数据 → 返回 VO（{@code downloadUrl} = 默认 1h 签名 URL）。
      *

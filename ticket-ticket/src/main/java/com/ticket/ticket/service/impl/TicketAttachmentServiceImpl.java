@@ -6,7 +6,6 @@ import com.ticket.common.exception.BusinessExceptionCode;
 import com.ticket.security.context.SecurityContextUtils;
 import com.ticket.ticket.entity.TicketAttachment;
 import com.ticket.ticket.entity.TicketInfo;
-import com.ticket.ticket.enums.TicketStatus;
 import com.ticket.ticket.mapper.TicketAttachmentMapper;
 import com.ticket.ticket.mapper.TicketInfoMapper;
 import com.ticket.ticket.oss.OssService;
@@ -67,13 +66,11 @@ public class TicketAttachmentServiceImpl implements TicketAttachmentService {
         if (file == null) {
             throw BusinessException.of(BusinessExceptionCode.PARAM_INVALID, "文件不能为空");
         }
-        // 1. 工单存在性 + 未软删 + 非 CLOSED（照评论三层结构）
+        // 1. 工单存在性 + 未软删（ticket 12 AC 只要求存在校验，不做 CLOSED 拒绝 ——
+        //    附件删除 / 列表不涉及状态机，状态约束不在本 ticket 验收范围内）
         TicketInfo ticket = ticketInfoMapper.selectById(ticketId);
         if (ticket == null) {
             throw BusinessException.of(BusinessExceptionCode.TICKET_NOT_FOUND);
-        }
-        if (ticket.getStatus() == TicketStatus.CLOSED) {
-            throw BusinessException.of(BusinessExceptionCode.TICKET_CLOSED);
         }
 
         // 2. 上传存储对象（OssFileValidator 校验在 OssService 内部完成）

@@ -85,9 +85,20 @@ public enum BusinessExceptionCode {
     ATTACHMENT_NOT_FOUND("T0106", HttpStatus.NOT_FOUND, "附件不存在"),
 
     // ---- OSS ---- （ticket 12 补齐附件存储相关码，详见 ADR-0014）
-    /** OSS 上传失败 —— putObject 抛 OSSException / ClientException / IO 异常 */
+    /**
+     * OSS 上传失败 —— putObject 抛 OSSException / ClientException / IO 异常。
+     * <p>
+     * <b>前缀语义澄清</b>：{@code A} 是「外部云服务集成」前缀族
+     * （{@code A01xx} AI、{@code A02xx} OSS），并非 AI 专属；
+     * {@code A0201} / {@code A0202} 按 ticket 12 验收标准字面取值，与
+     * {@link #AI_UNAVAILABLE}（{@code A0101}）同族不同段。
+     */
     OSS_UPLOAD_FAILED("A0201", HttpStatus.INTERNAL_SERVER_ERROR, "OSS上传失败"),
-    /** OSS 删除失败 —— deleteObject 抛 OSSException / ClientException */
+    /**
+     * OSS 删除失败 —— deleteObject 抛 OSSException / ClientException。
+     * <p>
+     * 前缀语义同 {@link #OSS_UPLOAD_FAILED}：{@code A} = 外部云服务集成前缀族。
+     */
     OSS_DELETE_FAILED("A0202", HttpStatus.INTERNAL_SERVER_ERROR, "OSS删除失败"),
 
     // ---- AI ---- （占位）
