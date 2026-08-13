@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.local
+.DS_Store
+
+# E2E 测试产物（截图 / Playwright 报告 / 失败 trace）
+e2e/screenshots/
+playwright-report/
+test-results/
