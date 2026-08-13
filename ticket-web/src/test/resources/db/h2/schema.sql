@@ -215,3 +215,20 @@ CREATE TABLE IF NOT EXISTS daily_ticket_stats
     PRIMARY KEY (id),
     CONSTRAINT uk_daily_ticket_stats_date UNIQUE (date)
 );
+
+-- 工单附件（ticket 12） ---------------------------------------
+-- 与 ticket-system/src/main/resources/db/mysql/schema.sql 结构一致（H2 方言）
+CREATE TABLE IF NOT EXISTS ticket_attachment
+(
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    ticket_id   BIGINT       NOT NULL,
+    file_url    VARCHAR(512) NOT NULL,
+    file_name   VARCHAR(255) NOT NULL DEFAULT '',
+    size        BIGINT       NOT NULL DEFAULT 0,
+    mime_type   VARCHAR(128) NOT NULL DEFAULT '',
+    uploader_id BIGINT       NOT NULL,
+    upload_time TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted  TINYINT      NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_attachment_ticket_id ON ticket_attachment (ticket_id);

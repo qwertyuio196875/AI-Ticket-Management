@@ -80,6 +80,16 @@ public enum BusinessExceptionCode {
     /** 工单分类重复 —— {@code name} 唯一索引冲突 */
     CATEGORY_DUPLICATE("S0502", HttpStatus.CONFLICT, "工单分类名称已存在"),
 
+    // ---- Ticket ---- （ticket 12 补齐附件相关码）
+    /** 附件不存在 —— ticket_attachment.id 未命中 / 已软删 / 不属于指定工单 */
+    ATTACHMENT_NOT_FOUND("T0106", HttpStatus.NOT_FOUND, "附件不存在"),
+
+    // ---- OSS ---- （ticket 12 补齐附件存储相关码，详见 ADR-0014）
+    /** OSS 上传失败 —— putObject 抛 OSSException / ClientException / IO 异常 */
+    OSS_UPLOAD_FAILED("A0201", HttpStatus.INTERNAL_SERVER_ERROR, "OSS上传失败"),
+    /** OSS 删除失败 —— deleteObject 抛 OSSException / ClientException */
+    OSS_DELETE_FAILED("A0202", HttpStatus.INTERNAL_SERVER_ERROR, "OSS删除失败"),
+
     // ---- AI ---- （占位）
     AI_UNAVAILABLE("A0101", HttpStatus.SERVICE_UNAVAILABLE, "AI 服务不可用");
 

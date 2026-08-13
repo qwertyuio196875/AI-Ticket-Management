@@ -13,6 +13,12 @@ spring:
     username: sa
     password: ""
 
+  # ticket 12 —— 附件上传 multipart 限制（与 main 配置一致）
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
   # H2 与 MySQL 的 DDL 方言有差异（AUTO_INCREMENT / INSERT IGNORE / ENGINE），
   # 故测试用独立的一份建表与种子脚本
   sql:
@@ -45,6 +51,15 @@ spring:
 jwt:
   secret: test-only-secret-key-for-integration-tests-32bytes+
   expire-minutes: 30
+
+# ticket 12 —— 测试环境固定本地文件降级（enabled=false），不连真实 OSS
+aliyun:
+  oss:
+    enabled: false
+    endpoint: ""
+    access-key-id: ""
+    access-key-secret: ""
+    bucket-name: ""
 
 logging:
   level:

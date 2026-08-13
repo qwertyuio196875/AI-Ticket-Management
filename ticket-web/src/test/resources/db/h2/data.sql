@@ -90,6 +90,11 @@ MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon,
     VALUES (15, 1, '统计查看', 'F', '', '', '', 1, 1, 'stats:view');
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 15);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 15);
+-- ticket 12 新增附件权限点：ticket:upload（admin + agent 都可上传/删除附件，与 ticket:comment 绑定一致）
+MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
+    VALUES (16, 5, '上传附件', 'F', '', '', '', 7, 1, 'ticket:upload');
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 16);
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 16);
 -- ticket 07：admin 拥有 "admin" 伪 authority（service 内"管理员"判定）
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 14);
 -- agent：仅 dashboard + ticket

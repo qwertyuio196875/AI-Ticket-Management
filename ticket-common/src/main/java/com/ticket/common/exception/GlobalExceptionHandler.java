@@ -10,6 +10,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * 全局异常处理（详见 AGENTS.md 第 5 节、ADR-0009）。
@@ -72,6 +73,21 @@ public class GlobalExceptionHandler {
         log.warn("Validation failed at [{} {}]: {}", request.getMethod(), request.getRequestURI(), detail);
         BusinessExceptionCode source = BusinessExceptionCode.PARAM_INVALID;
         return respond(source, source.getCode(), source.getMessage() + ": " + detail);
+    }
+
+    /**
+     * 文件大小超过上限 — Spring multipart 在请求解析阶段抛 {@link MaxUploadSizeExceededException}
+     * （ticket 12：{@code spring.servlet.multipart.max-file-size=50MB} 触发）。
+     * <p>
+     * 统一返回 400 + 中文提示，与 {@link com.ticket.ticket.oss.OssFileValidator}
+     * 的大小校验文案保持一致（双防线：先由容器拦截超限请求，业务校验兜底）。
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Result<Void>> handleMaxUploadSize(MaxUploadSizeExceededException ex,
+                                                            HttpServletRequest request) {
+        log.warn("MaxUploadSizeExceeded at [{} {}]: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
+        BusinessExceptionCode source = BusinessExceptionCode.PARAM_INVALID;
+        return respond(source, source.getCode(), "文件大小不能超过 50MB");
     }
 
     /**

@@ -281,3 +281,24 @@ CREATE TABLE IF NOT EXISTS daily_ticket_stats
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='每日工单统计（定时任务写入）';
+
+-- 工单附件（ticket 12） ---------------------------------------
+-- 阿里云 OSS 附件元数据（ADR-0014）：file_url 存存储 key（OSS 为
+-- ticket/{yyyyMMdd}/{uuid}.{ext}；本地降级模式为含 localPath 前缀的文件路径）
+-- is_deleted：软删标记，列表查询一律过滤 0；删除顺序约定"先删对象后软删元数据"
+CREATE TABLE IF NOT EXISTS ticket_attachment
+(
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    ticket_id   BIGINT UNSIGNED NOT NULL COMMENT '工单主键 ticket_info.id',
+    file_url    VARCHAR(512)    NOT NULL COMMENT '存储 key（OSS 或本地降级路径）',
+    file_name   VARCHAR(255)    NOT NULL DEFAULT '' COMMENT '原始文件名（展示用）',
+    size        BIGINT          NOT NULL DEFAULT 0 COMMENT '文件大小（字节）',
+    mime_type   VARCHAR(128)    NOT NULL DEFAULT '' COMMENT 'MIME 类型',
+    uploader_id BIGINT UNSIGNED NOT NULL COMMENT '上传人 sys_user.id',
+    upload_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
+    is_deleted  TINYINT         NOT NULL DEFAULT 0 COMMENT '软删标记：0 未删 / 1 已删',
+    PRIMARY KEY (id),
+    KEY idx_attachment_ticket_id (ticket_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='工单附件（阿里云 OSS / 本地降级）';

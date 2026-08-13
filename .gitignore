@@ -53,3 +53,6 @@ docs/agents/
 # Node (if any tooling added later)
 node_modules/
 dist/
+
+# 本地附件降级存储（ticket 12）：aliyun.oss.enabled=false 时文件落 ./tmp/oss/，不入库
+tmp/

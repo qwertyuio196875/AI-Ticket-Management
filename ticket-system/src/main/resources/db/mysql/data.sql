@@ -136,3 +136,13 @@ INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, componen
 -- 角色 ↔ 菜单：admin + agent 都拥有 stats:view
 INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
     (1, 15), (2, 15);
+
+-- 菜单权限点（ticket 12） ------------------------------------
+-- ticket:upload —— 工单附件上传/删除（POST/DELETE /attachments 端点）
+-- 挂在工单列表菜单（id=5）下作按钮；admin + agent 都可上传附件
+INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) VALUES
+    (16, 5, '上传附件', 'F', '', '', '', 7, 1, 'ticket:upload');
+
+-- 角色 ↔ 菜单：admin + agent 都拥有 ticket:upload（与 ticket:comment 绑定一致）
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
+    (1, 16), (2, 16);
