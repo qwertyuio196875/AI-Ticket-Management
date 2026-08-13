@@ -4,6 +4,8 @@ import com.ticket.common.result.Result;
 import com.ticket.ticket.aspect.OperationLog;
 import com.ticket.ticket.service.TicketAiReplyService;
 import com.ticket.ticket.vo.TicketAiReplyVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/v1/tickets")
+@Tag(name = "ai", description = "AI 智能：工单智能回复（DeepSeek）")
 public class AiReplyController {
 
     private final TicketAiReplyService ticketAiReplyService;
@@ -41,6 +44,7 @@ public class AiReplyController {
     @PostMapping("/{id}/ai-reply")
     @PreAuthorize("hasAuthority('ai:invoke')")
     @OperationLog(value = "AI 智能回复", type = "TICKET")
+    @Operation(summary = "AI 智能回复（DeepSeek）")
     public Result<TicketAiReplyVO> aiReply(@PathVariable Long id) {
         return Result.success(ticketAiReplyService.getAiReply(id));
     }

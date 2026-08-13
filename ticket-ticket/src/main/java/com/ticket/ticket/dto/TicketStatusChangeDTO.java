@@ -1,6 +1,7 @@
 package com.ticket.ticket.dto;
 
 import com.ticket.ticket.enums.TicketStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -19,6 +20,7 @@ import lombok.Data;
  * </ul>
  */
 @Data
+@Schema(description = "工单状态变更参数")
 public class TicketStatusChangeDTO {
 
     /** 目标状态 —— 必填 */

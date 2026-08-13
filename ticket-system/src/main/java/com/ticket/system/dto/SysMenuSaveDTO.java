@@ -1,5 +1,6 @@
 package com.ticket.system.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -11,6 +12,7 @@ import lombok.Data;
  * permission 对按钮类型必填，对目录 / 菜单可为空。
  */
 @Data
+@Schema(description = "菜单创建 / 更新参数")
 public class SysMenuSaveDTO {
 
     private Long id;

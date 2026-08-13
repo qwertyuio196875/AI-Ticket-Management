@@ -1,10 +1,10 @@
 package com.ticket.ticket.vo;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDate;
 
 /**
  * 工单按日趋势聚合 VO（ticket 10 / ADR-0033）。
@@ -15,6 +15,7 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "工单趋势统计结果")
 public class TrendItemVO {
 
     /** 当日（{@code yyyy-MM-dd}） */

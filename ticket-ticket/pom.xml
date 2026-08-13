@@ -100,6 +100,18 @@
         </dependency>
 
         <!--
+            ticket 11 —— Swagger OpenAPI 3 注解（@Tag / @Operation / @Schema）。
+            本模块 DTO / VO 标注 @Schema(description = "...")（Knife4j 文档 AC）。
+            注意：easyexcel 传递的 swagger-annotations 是非 jakarta 版（2.2.25），
+            这里显式声明 jakarta 版覆盖，避免与 Knife4j / springdoc 的注解包不一致。
+            版本由根 pom dependencyManagement 统一。
+        -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations-jakarta</artifactId>
+        </dependency>
+
+        <!--
             ticket-ai：Spring AI ChatClient 封装 + 工单分类接口（ticket 08）。
             依赖 TicketClassifier / AIRecordPersistService / AiProperties，
             实现 AI 分类同步调用（2s 超时） + 事务外 ai_ticket_record 落库。

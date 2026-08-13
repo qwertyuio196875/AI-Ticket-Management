@@ -1,5 +1,6 @@
 package com.ticket.ticket.vo;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
@@ -10,6 +11,7 @@ import lombok.Data;
  * @param fallback  是否降级（true=模板兜底，false=真实 AI 回复）
  */
 @Data
+@Schema(description = "AI 智能回复结果")
 public class TicketAiReplyVO {
 
     private String reply;

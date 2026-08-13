@@ -73,12 +73,12 @@
             <scope>test</scope>
         </dependency>
 
-        <!--
-            ticket 09 —— 工单缓存集成测试用 Testcontainers Redis。
+<!--
+            ticket 09 —— 工单详情缓存集成测试用 Testcontainers Redis。
             与现有"本机无 Docker"默认假设不冲突：TicketCacheIntegrationTest
             用 @EnabledIfSystemProperty("test.integration", "true") 标记，
             默认 mvn test 不启用；CI 或本机有 Docker 时传 -Dtest.integration=true 启用。
-            testcontainers 1.19.8 + junit-jupiter（GenericContainer 通用 Redis 镜像）。
+            testcontainers 1.19.8 + junit-jupiter（（503 Service Unavailable） 通用 Redis 镜像）。
         -->
         <dependency>
             <groupId>org.testcontainers</groupId>
@@ -91,6 +91,18 @@
             <artifactId>junit-jupiter</artifactId>
             <version>1.19.8</version>
             <scope>test</scope>
+        </dependency>
+
+        <!--
+            ticket 11 —— Knife4j API 文档（ADR-0032）。
+            内含 springdoc-openapi-starter-webmvc-ui，提供 /v3/api-docs 与 /swagger-ui 服务。
+            knife4j.production=false（默认）开启 /doc.html 增强 UI。
+            注：@Tag / @Operation / @Schema 等 swagger 注解由 starter 传递依赖提供
+            （springdoc-openapi-starter-common → swagger-annotations-jakarta），无需显式声明。
+        -->
+        <dependency>
+            <groupId>com.github.xiaoymin</groupId>
+            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
         </dependency>
     </dependencies>
 

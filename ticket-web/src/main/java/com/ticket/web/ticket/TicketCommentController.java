@@ -6,6 +6,8 @@ import com.ticket.ticket.aspect.OperationLog;
 import com.ticket.ticket.dto.TicketCommentCreateDTO;
 import com.ticket.ticket.service.TicketCommentService;
 import com.ticket.ticket.vo.TicketCommentVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -36,6 +38,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/tickets/{id}/comments")
+@Tag(name = "ticket", description = "工单管理：CRUD / 状态机 / 评论 / 导出")
 public class TicketCommentController {
 
     private final TicketCommentService ticketCommentService;
@@ -53,6 +56,7 @@ public class TicketCommentController {
     @PostMapping
     @PreAuthorize("hasAuthority('ticket:comment')")
     @OperationLog(value = "新增工单评论", type = "TICKET")
+    @Operation(summary = "新增工单评论")
     public Result<Long> add(@PathVariable("id") Long ticketId,
                             @Valid @RequestBody TicketCommentCreateDTO dto) {
         Long commentId = ticketCommentService.add(ticketId, dto,
@@ -68,6 +72,7 @@ public class TicketCommentController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority('ticket:view')")
+    @Operation(summary = "查询工单评论列表")
     public Result<List<TicketCommentVO>> list(@PathVariable("id") Long ticketId) {
         return Result.success(ticketCommentService.list(ticketId));
     }
@@ -81,6 +86,7 @@ public class TicketCommentController {
     @DeleteMapping("/{commentId}")
     @PreAuthorize("hasAuthority('ticket:comment')")
     @OperationLog(value = "删除工单评论", type = "TICKET")
+    @Operation(summary = "软删工单评论")
     public Result<Void> delete(@PathVariable("id") Long ticketId,
                                @PathVariable("commentId") Long commentId) {
         ticketCommentService.delete(ticketId, commentId,

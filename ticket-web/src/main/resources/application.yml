@@ -45,6 +45,17 @@ spring:
           max-tokens: 2048
           timeout: 30s
 
+  # ticket 11 —— Springdoc / Knife4j 文档端点（详见 ADR-0032）。
+  # /swagger-ui.html 默认托管；Knife4j 接管 /doc.html 不需要改这里。
+  # springdoc.api-docs.path 控制 /v3/api-docs 与 /v3/api-docs.yaml 的根路径。
+  springdoc:
+    api-docs:
+      path: /v3/api-docs
+    swagger-ui:
+      path: /swagger-ui.html
+      # knife4j.production=true 时关闭增强 UI，保留基础 swagger-ui
+      enabled: true
+
 mybatis-plus:
   configuration:
     # 下划线字段名 → 驼峰属性名（create_time → createTime）

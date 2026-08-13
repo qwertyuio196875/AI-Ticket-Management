@@ -1,5 +1,6 @@
 package com.ticket.system.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -10,6 +11,7 @@ import lombok.Data;
  * 创建时密码必填；更新时密码留空代表"不改密码"。
  */
 @Data
+@Schema(description = "用户创建 / 更新参数")
 public class SysUserSaveDTO {
 
     private Long id;

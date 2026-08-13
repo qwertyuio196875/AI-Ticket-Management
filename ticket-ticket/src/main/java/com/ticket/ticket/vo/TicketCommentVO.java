@@ -1,9 +1,9 @@
 package com.ticket.ticket.vo;
 
 import com.ticket.ticket.enums.CommentType;
-import lombok.Data;
-
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
+import lombok.Data;
 
 /**
  * 工单评论展示 VO（ticket 07，ticket-web 共享）。
@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
  * </ul>
  */
 @Data
+@Schema(description = "工单评论展示对象")
 public class TicketCommentVO {
 
     private Long id;

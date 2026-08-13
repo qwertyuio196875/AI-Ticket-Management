@@ -1,5 +1,6 @@
 package com.ticket.ticket.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -21,6 +22,7 @@ import lombok.Data;
  * {@code reason} 可空，写入 {@code ticket_log.content}。
  */
 @Data
+@Schema(description = "分配工单处理人参数")
 public class TicketAssignDTO {
 
     /** 处理人 sys_user.id —— 必填 */

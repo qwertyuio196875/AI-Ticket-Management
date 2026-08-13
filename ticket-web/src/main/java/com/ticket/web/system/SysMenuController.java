@@ -6,6 +6,8 @@ import com.ticket.system.dto.SysMenuSaveDTO;
 import com.ticket.system.service.SysMenuService;
 import com.ticket.system.vo.SysMenuTreeVO;
 import com.ticket.web.system.vo.SysMenuVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -35,6 +37,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/menus")
+@Tag(name = "system", description = "系统管理：用户 / 角色 / 菜单 / 字典 / 工单分类")
 public class SysMenuController {
 
     private final SysMenuService sysMenuService;
@@ -45,6 +48,7 @@ public class SysMenuController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('menu:manage')")
+    @Operation(summary = "全量菜单列表（管理页面用）")
     public Result<List<SysMenuVO>> listAll() {
         return Result.success(sysMenuService.listAll().stream().map(SysMenuVO::from).toList());
     }
@@ -62,24 +66,28 @@ public class SysMenuController {
      * SysMenuServiceImpl#treeByUser。
      */
     @GetMapping("/tree")
+    @Operation(summary = "当前用户的菜单树（侧边栏用）")
     public Result<List<SysMenuTreeVO>> tree(@AuthenticationPrincipal LoginUser currentUser) {
         return Result.success(sysMenuService.treeByUser(currentUser.getUserId()));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('menu:manage')")
+    @Operation(summary = "按 id 查询菜单详情")
     public Result<SysMenuVO> getById(@PathVariable Long id) {
         return Result.success(SysMenuVO.from(sysMenuService.getById(id)));
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('menu:manage')")
+    @Operation(summary = "创建菜单")
     public Result<Long> create(@Valid @RequestBody SysMenuSaveDTO dto) {
         return Result.success(sysMenuService.create(dto));
     }
 
     @PutMapping
     @PreAuthorize("hasAuthority('menu:manage')")
+    @Operation(summary = "更新菜单")
     public Result<Void> update(@Valid @RequestBody SysMenuSaveDTO dto) {
         sysMenuService.update(dto);
         return Result.success(null);
@@ -87,6 +95,7 @@ public class SysMenuController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('menu:manage')")
+    @Operation(summary = "删除菜单（级联删子菜单）")
     public Result<Void> delete(@PathVariable Long id) {
         sysMenuService.delete(id);
         return Result.success(null);

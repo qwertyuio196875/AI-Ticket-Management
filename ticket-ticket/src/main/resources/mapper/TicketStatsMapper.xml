@@ -61,4 +61,59 @@
         LIMIT #{limit}
     </select>
 
+    <!--
+        ticket 11 / DailyTicketStatsTask：指定日期新建工单数。
+        区间 [date, date+1) —— 使用 create_time + DATE 比较，避开时区换算。
+    -->
+    <select id="countCreatedOn" resultType="long">
+        SELECT COUNT(*)
+        FROM ticket_info
+        WHERE is_deleted = 0
+          AND create_time <![CDATA[>=]]> #{date}
+          AND create_time <![CDATA[<]]> DATE_ADD(#{date}, INTERVAL 1 DAY)
+    </select>
+
+    <!--
+        ticket 11 / DailyTicketStatsTask：指定日期变更为 RESOLVED 的工单数。
+        通过 ticket_log + DATE(create_time) 落在当日过滤 —— 不依赖 ticket_info.update_time
+        （后者可能被无关修改刷掉，如改优先级）。
+        content 格式见 TicketStatusServiceImpl#buildStatusChangeContent:
+            "from=X, to=Y[, reason=Z]"
+        匹配 to=RESOLVED 而不是子串 RESOLVED —— 后者会误中 "reason=...RESOLVED..."
+        等含 RESOLVED 子串的文本。
+    -->
+    <select id="countResolvedOn" resultType="long">
+        SELECT COUNT(DISTINCT ticket_id)
+        FROM ticket_log
+        WHERE event_type = 'STATUS_CHANGED'
+          AND content LIKE <![CDATA[%]]>%, to=RESOLVED%'
+          AND create_time <![CDATA[>=]]> #{date}
+          AND create_time <![CDATA[<]]> DATE_ADD(#{date}, INTERVAL 1 DAY)
+    </select>
+
+    <!--
+        ticket 11 / DailyTicketStatsTask：当日已解决工单的平均处理分钟数。
+        取每张工单"首次"进入 RESOLVED 的 ticket_log 行（MIN(l.create_time)），
+        与 ticket_info.create_time 的分钟差，再求平均。
+        当日无解决工单 → 返回 0（IFNULL 兜底）。
+        同 countResolvedOn：匹配 "to=RESOLVED" 子串以避免 reason 字段干扰。
+    -->
+    <select id="avgHandleMinutesOn" resultType="long">
+        SELECT COALESCE(
+            CAST(AVG(TIMESTAMPDIFF(MINUTE, t.create_time, first_resolved.first_time)) AS SIGNED),
+            0
+        )
+        FROM (
+            SELECT ticket_id, MIN(create_time) AS first_time
+            FROM ticket_log
+            WHERE event_type = 'STATUS_CHANGED'
+              AND content LIKE <![CDATA[%]]>%, to=RESOLVED%'
+              AND create_time <![CDATA[>=]]> #{date}
+              AND create_time <![CDATA[<]]> DATE_ADD(#{date}, INTERVAL 1 DAY)
+            GROUP BY ticket_id
+        ) first_resolved
+        JOIN ticket_info t ON t.id = first_resolved.ticket_id
+        WHERE t.is_deleted = 0
+    </select>
+
 </mapper>

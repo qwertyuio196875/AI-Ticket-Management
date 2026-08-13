@@ -8,6 +8,8 @@ import com.ticket.system.entity.SysRole;
 import com.ticket.system.service.SysRoleService;
 import com.ticket.web.system.vo.PageVO;
 import com.ticket.web.system.vo.SysRoleVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -39,6 +41,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/roles")
 @PreAuthorize("hasAuthority('role:manage')")
+@Tag(name = "system", description = "系统管理：用户 / 角色 / 菜单 / 字典 / 工单分类")
 public class SysRoleController {
 
     private final SysRoleService sysRoleService;
@@ -48,6 +51,7 @@ public class SysRoleController {
     }
 
     @GetMapping
+    @Operation(summary = "分页查询角色")
     public Result<PageVO<SysRoleVO>> page(
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") long pageNum,
@@ -58,38 +62,45 @@ public class SysRoleController {
     }
 
     @GetMapping("/all")
+    @Operation(summary = "查询所有角色（下拉框用）")
     public Result<List<SysRoleVO>> listAll() {
         return Result.success(sysRoleService.listAll().stream().map(SysRoleVO::from).toList());
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "按 id 查询角色详情")
     public Result<SysRoleVO> getById(@PathVariable Long id) {
         return Result.success(SysRoleVO.from(sysRoleService.getById(id)));
     }
 
     @PostMapping
+    @Operation(summary = "创建角色")
     public Result<Long> create(@Valid @RequestBody SysRoleSaveDTO dto) {
         return Result.success(sysRoleService.create(dto));
     }
 
     @PutMapping
+    @Operation(summary = "更新角色")
     public Result<Void> update(@Valid @RequestBody SysRoleSaveDTO dto) {
         sysRoleService.update(dto);
         return Result.success(null);
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "删除角色")
     public Result<Void> delete(@PathVariable Long id) {
         sysRoleService.delete(id);
         return Result.success(null);
     }
 
     @GetMapping("/{id}/menus")
+    @Operation(summary = "查询角色已分配的菜单 id 列表")
     public Result<List<Long>> listMenuIds(@PathVariable Long id) {
         return Result.success(sysRoleService.listMenuIds(id));
     }
 
     @PutMapping("/{id}/menus")
+    @Operation(summary = "为角色分配菜单")
     public Result<Void> assignMenus(@PathVariable Long id,
                                     @Valid @RequestBody SysRoleAssignMenusDTO dto) {
         sysRoleService.assignMenus(id, dto);

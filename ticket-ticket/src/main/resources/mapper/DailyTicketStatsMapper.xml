@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+    DailyTicketStatsMapper SQL（ticket 11 / ADR-0031）。
+
+    upsert：用 INSERT ... ON DUPLICATE KEY UPDATE 实现"同日期重复执行不报错且覆盖更新"。
+    MySQL 8 / H2（MODE=MySQL）均支持该语法 —— 无需 databaseId 分支。
+
+    显式列名 + 占位符引用（不用 VALUES() 函数）以兼容 MySQL 8.0.20+ 的 VALUES() 弃用建议。
+-->
+<mapper namespace="com.ticket.ticket.mapper.DailyTicketStatsMapper">
+
+    <insert id="upsert" parameterType="com.ticket.ticket.entity.DailyTicketStats">
+        INSERT INTO daily_ticket_stats (date, created_count, resolved_count, avg_handle_minutes)
+        VALUES (#{date}, #{createdCount}, #{resolvedCount}, #{avgHandleMinutes})
+        ON DUPLICATE KEY UPDATE
+            created_count      = #{createdCount},
+            resolved_count     = #{resolvedCount},
+            avg_handle_minutes = #{avgHandleMinutes}
+    </insert>
+
+</mapper>

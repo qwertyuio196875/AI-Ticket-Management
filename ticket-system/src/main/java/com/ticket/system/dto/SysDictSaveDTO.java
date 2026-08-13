@@ -1,5 +1,6 @@
 package com.ticket.system.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -18,6 +19,7 @@ import lombok.Data;
  * </ul>
  */
 @Data
+@Schema(description = "数据字典创建 / 更新参数")
 public class SysDictSaveDTO {
 
     /** 更新时必传；创建时可不传 */

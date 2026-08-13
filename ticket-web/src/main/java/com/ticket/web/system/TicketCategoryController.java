@@ -5,6 +5,8 @@ import com.ticket.system.dto.TicketCategorySaveDTO;
 import com.ticket.system.entity.TicketCategory;
 import com.ticket.system.service.TicketCategoryService;
 import com.ticket.web.system.vo.TicketCategoryVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,6 +32,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/ticket-categories")
+@Tag(name = "system", description = "系统管理：用户 / 角色 / 菜单 / 字典 / 工单分类")
 public class TicketCategoryController {
 
     private final TicketCategoryService ticketCategoryService;
@@ -42,6 +45,7 @@ public class TicketCategoryController {
      * 查询所有已启用分类 —— 前端下拉用，任何已登录用户可访问。
      */
     @GetMapping
+    @Operation(summary = "查询所有已启用分类（下拉框用）")
     public Result<List<TicketCategoryVO>> listAllEnabled() {
         return Result.success(ticketCategoryService.listAllEnabled().stream()
                 .map(TicketCategoryVO::from).toList());
@@ -52,6 +56,7 @@ public class TicketCategoryController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('category:manage')")
+    @Operation(summary = "按 id 查询工单分类详情")
     public Result<TicketCategoryVO> getById(@PathVariable Long id) {
         return Result.success(TicketCategoryVO.from(ticketCategoryService.getById(id)));
     }
@@ -61,6 +66,7 @@ public class TicketCategoryController {
      */
     @PostMapping
     @PreAuthorize("hasAuthority('category:manage')")
+    @Operation(summary = "创建工单分类")
     public Result<Long> create(@Valid @RequestBody TicketCategorySaveDTO dto) {
         return Result.success(ticketCategoryService.create(dto));
     }
@@ -70,6 +76,7 @@ public class TicketCategoryController {
      */
     @PutMapping
     @PreAuthorize("hasAuthority('category:manage')")
+    @Operation(summary = "更新工单分类")
     public Result<Void> update(@Valid @RequestBody TicketCategorySaveDTO dto) {
         ticketCategoryService.update(dto);
         return Result.success(null);
@@ -80,6 +87,7 @@ public class TicketCategoryController {
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('category:manage')")
+    @Operation(summary = "删除工单分类")
     public Result<Void> delete(@PathVariable Long id) {
         ticketCategoryService.delete(id);
         return Result.success(null);

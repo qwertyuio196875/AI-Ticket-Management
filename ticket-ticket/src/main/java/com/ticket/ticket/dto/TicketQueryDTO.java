@@ -1,9 +1,9 @@
 package com.ticket.ticket.dto;
 
 import com.ticket.ticket.enums.TicketStatus;
-import lombok.Data;
-
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
+import lombok.Data;
 
 /**
  * 工单分页查询参数（ticket 05 AC：{@code GET — paginated list with filters}）。
@@ -20,6 +20,7 @@ import java.time.LocalDate;
  * 不在范围（留后续 ticket）：关键词搜索（{@code title} / {@code content} 模糊查询 —— ticket 09+）。
  */
 @Data
+@Schema(description = "工单分页查询参数")
 public class TicketQueryDTO {
 
     /** 页码，从 1 起，默认 1 */

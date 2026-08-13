@@ -7,6 +7,8 @@ import com.ticket.security.user.LoginUser;
 import com.ticket.web.auth.dto.LoginDTO;
 import com.ticket.web.auth.vo.LoginVO;
 import com.ticket.web.auth.vo.UserInfoVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/v1/auth")
+@Tag(name = "auth", description = "认证授权：登录 / 登出 / 当前用户")
 public class AuthController {
 
     private final AuthService authService;
@@ -46,6 +49,7 @@ public class AuthController {
      * {@code Result.error("401", ...)} + HTTP 401。
      */
     @PostMapping("/login")
+    @Operation(summary = "登录", description = "校验用户名密码，返回 JWT token")
     public Result<LoginVO> login(@Valid @RequestBody LoginDTO loginDTO) {
         return Result.success(LoginVO.from(
                 authService.login(loginDTO.getUsername(), loginDTO.getPassword())));
@@ -57,6 +61,7 @@ public class AuthController {
      * principal 由 {@code JwtAuthFilter} 从 token 还原，此处不查库。
      */
     @GetMapping("/me")
+    @Operation(summary = "当前登录用户", description = "返回 JWT 中的当前用户信息（含权限列表）")
     public Result<UserInfoVO> me(@AuthenticationPrincipal LoginUser currentUser) {
         return Result.success(UserInfoVO.from(currentUser));
     }
@@ -67,6 +72,7 @@ public class AuthController {
      * token 从请求头现取：JWT 无状态，服务端没有"当前会话"可供撤销。
      */
     @PostMapping("/logout")
+    @Operation(summary = "登出", description = "把当前 token 加入 Redis 黑名单，30 分钟内失效")
     public Result<Void> logout(HttpServletRequest request) {
         authService.logout(tokenResolver.resolve(request));
         return Result.success(null);

@@ -45,6 +45,32 @@ public class SecurityConfig {
      */
     private static final String[] TRACER_BULLET_ENDPOINTS = {"/api/v1/ping", "/api/v1/echo"};
 
+    /**
+     * 公开端点：Knife4j / Springdoc API 文档与 UI（ticket 11 / ADR-0032）。
+     * <p>
+     * 包含：
+     * <ul>
+     *     <li>{@code /doc.html} —— Knife4j 增强 UI</li>
+     *     <li>{@code /swagger-ui.html} 与 {@code /swagger-ui/**} —— Springdoc 默认 UI（含 webjars 静态资源）</li>
+     *     <li>{@code /v3/api-docs/**} —— OpenAPI JSON（{@code /v3/api-docs} 自身 + 按 group 索引的子 doc）</li>
+     *     <li>{@code /webjars/**} —— Swagger UI 的静态资源（springdoc 依赖）</li>
+     * </ul>
+     * 生产环境通过 {@code knife4j.production=true} 关闭 UI（{@code /doc.html} + {@code /swagger-ui.html}），
+     * 不影响 {@code /v3/api-docs}（脚本仍可拉取 OpenAPI）。
+     */
+    private static final String[] DOC_ENDPOINTS = {
+            "/doc.html",
+            "/doc.html/**",
+            "/swagger-ui.html",
+            "/swagger-ui/**",
+            // 注意: AntPathMatcher 的 /** 不匹配根路径本身, 必须显式列出
+            "/v3/api-docs",
+            "/v3/api-docs/**",
+            "/v3/api-docs.yaml",
+            "/webjars/**",
+            "/favicon.ico"
+    };
+
     /** BCrypt —— 自带随机盐，同一密码每次哈希结果不同 */
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -67,6 +93,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(registry -> registry
                         .requestMatchers(LOGIN_ENDPOINT).permitAll()
                         .requestMatchers(TRACER_BULLET_ENDPOINTS).permitAll()
+                        // ticket 11 —— Knife4j / Springdoc 文档端点放行
+                        .requestMatchers(DOC_ENDPOINTS).permitAll()
                         // 其余一律需要认证；细粒度操作权限由 @PreAuthorize 在 ticket 03 补
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling

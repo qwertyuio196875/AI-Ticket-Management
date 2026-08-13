@@ -1,6 +1,7 @@
 package com.ticket.web.auth.vo;
 
 import com.ticket.security.user.LoginUser;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.util.List;
@@ -15,9 +16,13 @@ import java.util.List;
  * @param username    登录名
  * @param authorities 操作权限字符串；ticket 02 阶段恒为空，ticket 03 接入 sys_menu.permission 后才有值
  */
+@Schema(description = "当前登录用户信息（来自 JWT 载荷）")
 public record UserInfoVO(
+        @Schema(description = "sys_user.id", example = "1")
         Long userId,
+        @Schema(description = "登录名", example = "admin")
         String username,
+        @Schema(description = "操作权限字符串列表", example = "[\"ticket:view\", \"stats:view\"]")
         List<String> authorities
 ) {
 

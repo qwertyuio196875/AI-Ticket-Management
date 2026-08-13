@@ -14,6 +14,8 @@ import com.ticket.ticket.service.TicketInfoService;
 import com.ticket.ticket.service.TicketStatusService;
 import com.ticket.ticket.vo.TicketVO;
 import com.ticket.web.system.vo.PageVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -64,6 +66,7 @@ import java.time.format.DateTimeFormatter;
  */
 @RestController
 @RequestMapping("/api/v1/tickets")
+@Tag(name = "ticket", description = "工单管理：CRUD / 状态机 / 评论 / 导出")
 public class TicketController {
 
     private final TicketInfoService ticketInfoService;
@@ -84,6 +87,7 @@ public class TicketController {
     @PostMapping
     @PreAuthorize("hasAuthority('ticket:create')")
     @OperationLog(value = "创建工单", type = "TICKET")
+    @Operation(summary = "创建工单")
     public Result<Long> create(@Valid @RequestBody TicketCreateDTO dto) {
         return Result.success(ticketInfoService.create(dto));
     }
@@ -93,6 +97,7 @@ public class TicketController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority('ticket:view')")
+    @Operation(summary = "分页查询工单列表")
     public Result<PageVO<TicketVO>> page(TicketQueryDTO query) {
         IPage<TicketVO> page = ticketInfoService.page(query);
         return Result.success(new PageVO<>(page.getTotal(),
@@ -104,6 +109,7 @@ public class TicketController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('ticket:view')")
+    @Operation(summary = "查询工单详情")
     public Result<TicketVO> getById(@PathVariable Long id) {
         return Result.success(ticketInfoService.getById(id));
     }
@@ -117,6 +123,7 @@ public class TicketController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ticket:view')")
     @OperationLog(value = "更新工单", type = "TICKET")
+    @Operation(summary = "更新工单 title / content")
     public Result<Void> update(@PathVariable Long id,
                                @Valid @RequestBody TicketUpdateDTO dto) {
         // path id 与 body id 取一即可；这里以 path 为准
@@ -131,6 +138,7 @@ public class TicketController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ticket:delete')")
     @OperationLog(value = "删除工单", type = "TICKET")
+    @Operation(summary = "软删工单")
     public Result<Void> delete(@PathVariable Long id) {
         ticketInfoService.softDelete(id);
         return Result.success(null);
@@ -148,6 +156,7 @@ public class TicketController {
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAuthority('ticket:update')")
     @OperationLog(value = "变更工单状态", type = "TICKET")
+    @Operation(summary = "变更工单状态（ticket 06 状态机）")
     public Result<Void> changeStatus(@PathVariable Long id,
                                      @Valid @RequestBody TicketStatusChangeDTO dto) {
         ticketStatusService.changeStatus(id, dto.getTargetStatus(), dto.getReason(),
@@ -164,6 +173,7 @@ public class TicketController {
     @PutMapping("/{id}/assign")
     @PreAuthorize("hasAuthority('ticket:assign')")
     @OperationLog(value = "分配工单", type = "TICKET")
+    @Operation(summary = "分配处理人")
     public Result<Void> assign(@PathVariable Long id,
                                @Valid @RequestBody TicketAssignDTO dto) {
         ticketStatusService.assign(id, dto.getHandlerId(), dto.getReason(),
@@ -180,6 +190,7 @@ public class TicketController {
     @PostMapping("/{id}/close")
     @PreAuthorize("hasAuthority('ticket:close')")
     @OperationLog(value = "关闭工单", type = "TICKET")
+    @Operation(summary = "关闭工单")
     public Result<Void> close(@PathVariable Long id) {
         ticketStatusService.close(id, null, SecurityContextUtils.currentUserIdRequired());
         return Result.success(null);
@@ -204,6 +215,7 @@ public class TicketController {
      */
     @GetMapping("/export")
     @PreAuthorize("hasAuthority('ticket:view')")
+    @Operation(summary = "导出工单列表为 .xlsx")
     public void export(TicketQueryDTO query, HttpServletResponse response) throws IOException {
         // 1. 设置响应头
         String filename = "tickets-" + LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE) + ".xlsx";

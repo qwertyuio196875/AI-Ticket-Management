@@ -1,5 +1,6 @@
 package com.ticket.ticket.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -18,6 +19,7 @@ import lombok.Data;
  * <b>权限校验</b>：Service 层校验"创建人或管理员"，DTO 自身不持有用户上下文。
  */
 @Data
+@Schema(description = "更新工单参数")
 public class TicketUpdateDTO {
 
     /** 由 Controller 从路径参数注入；不参与 @Valid 校验 */

@@ -1,5 +1,6 @@
 package com.ticket.system.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -8,6 +9,7 @@ import lombok.Data;
  * 创建 / 更新角色的请求参数（ticket 03）。
  */
 @Data
+@Schema(description = "角色创建 / 更新参数")
 public class SysRoleSaveDTO {
 
     private Long id;

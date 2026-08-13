@@ -52,6 +52,16 @@
             <artifactId>lombok</artifactId>
         </dependency>
 
+        <!--
+            ticket 11 —— Swagger OpenAPI 3 注解（@Tag / @Operation / @Schema）。
+            本模块 DTO / VO 标注 @Schema(description = "...")（Knife4j 文档 AC），
+            显式声明避免依赖传递丢失；版本由根 pom dependencyManagement 统一。
+        -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations-jakarta</artifactId>
+        </dependency>
+
         <!-- 单元测试 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

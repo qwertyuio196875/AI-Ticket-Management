@@ -1,11 +1,11 @@
 package com.ticket.system.vo;
 
 import com.ticket.system.entity.SysMenu;
-import lombok.Data;
-
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Data;
 
 /**
  * 菜单树节点 VO（ticket 03）。
@@ -15,6 +15,7 @@ import java.util.List;
  * 不应污染数据库实体。
  */
 @Data
+@Schema(description = "菜单树节点展示对象")
 public class SysMenuTreeVO {
 
     private Long id;

@@ -63,6 +63,19 @@
             spring-ai-starter-model-openai。
         -->
         <spring-ai.version>1.0.0-M6</spring-ai.version>
+        <!--
+            ticket 11 引入：Knife4j —— 基于 springdoc-openapi 的 Swagger UI 增强版。
+            选 4.5.x（artifact 命名 knife4j-openapi3-jakarta-spring-boot-starter），
+            与 springdoc-openapi 2.5.x + Spring Boot 3.2.x 兼容（详见 ADR-0032）。
+        -->
+        <knife4j.version>4.5.0</knife4j.version>
+        <!--
+            Swagger OpenAPI 3 注解（@Tag / @Operation / @Schema）—— jakarta 版。
+            knife4j starter 在 ticket-web 传递依赖此版本；ticket-system / ticket-ticket
+            模块的 DTO/VO 也要用 @Schema，故在 dependencyManagement 统一版本、
+            业务模块显式声明（与 Lombok 处理方式一致，避免依赖传递丢失）。
+        -->
+        <swagger-annotations.version>2.2.20</swagger-annotations.version>
 
         <!-- 模块版本统一管理 -->
         <ticket-common.version>1.0.0</ticket-common.version>
@@ -161,6 +174,28 @@
                 <groupId>com.alibaba</groupId>
                 <artifactId>easyexcel</artifactId>
                 <version>${easyexcel.version}</version>
+            </dependency>
+
+            <!--
+                ticket 11 引入：Knife4j —— Swagger UI 增强版（ADR-0032）。
+                "jakarta" 后缀是 jakarta.servlet API 适配，对应 Spring Boot 3 / Springdoc 2.x。
+                内含 springdoc-openapi-starter-webmvc-ui，无需单独引 springdoc。
+            -->
+            <dependency>
+                <groupId>com.github.xiaoymin</groupId>
+                <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+                <version>${knife4j.version}</version>
+            </dependency>
+
+            <!--
+                ticket 11 —— Swagger OpenAPI 3 注解（@Tag / @Operation / @Schema），jakarta 版。
+                ticket-system / ticket-ticket 的 DTO/VO 标注 @Schema 需要；
+                ticket-web 由 knife4j starter 传递。
+            -->
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations-jakarta</artifactId>
+                <version>${swagger-annotations.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

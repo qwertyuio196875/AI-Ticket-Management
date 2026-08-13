@@ -186,3 +186,32 @@ CREATE TABLE IF NOT EXISTS ai_ticket_record
 CREATE INDEX IF NOT EXISTS idx_ai_ticket_record_ticket_id ON ai_ticket_record (ticket_id);
 CREATE INDEX IF NOT EXISTS idx_ai_ticket_record_call_type ON ai_ticket_record (call_type);
 CREATE INDEX IF NOT EXISTS idx_ai_ticket_record_create_time ON ai_ticket_record (create_time);
+
+-- 定时任务执行日志（ticket 11） -------------------------------
+-- 与 ticket-system/src/main/resources/db/mysql/schema.sql 对齐
+CREATE TABLE IF NOT EXISTS task_execution_log
+(
+    id            BIGINT       NOT NULL AUTO_INCREMENT,
+    task_name     VARCHAR(100) NOT NULL,
+    start_time    TIMESTAMP    NOT NULL,
+    end_time      TIMESTAMP    NOT NULL,
+    status        VARCHAR(20)  NOT NULL,
+    error_message VARCHAR(2000) DEFAULT NULL,
+    create_time   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_task_execution_log_task_name ON task_execution_log (task_name);
+CREATE INDEX IF NOT EXISTS idx_task_execution_log_create_time ON task_execution_log (create_time);
+
+-- 每日工单统计（ticket 11） -----------------------------------
+CREATE TABLE IF NOT EXISTS daily_ticket_stats
+(
+    id                 BIGINT   NOT NULL AUTO_INCREMENT,
+    date               DATE     NOT NULL,
+    created_count      BIGINT   NOT NULL DEFAULT 0,
+    resolved_count     BIGINT   NOT NULL DEFAULT 0,
+    avg_handle_minutes BIGINT   NOT NULL DEFAULT 0,
+    create_time        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_daily_ticket_stats_date UNIQUE (date)
+);

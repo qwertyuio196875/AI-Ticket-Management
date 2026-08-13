@@ -3,9 +3,9 @@ package com.ticket.ticket.vo;
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.annotation.format.DateTimeFormat;
 import com.alibaba.excel.annotation.write.style.ColumnWidth;
-import lombok.Data;
-
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
+import lombok.Data;
 
 /**
  * 工单列表 Excel 导出行（ticket 10 / ADR-0030）。
@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
  * 按行 status 字段动态着色（spec / ticket 10 AC）。
  */
 @Data
+@Schema(description = "工单导出行数据")
 public class TicketExportRow {
 
     @ExcelProperty(value = "工单号", index = 0)

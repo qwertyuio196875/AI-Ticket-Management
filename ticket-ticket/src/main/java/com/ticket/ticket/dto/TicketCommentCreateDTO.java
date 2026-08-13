@@ -1,5 +1,6 @@
 package com.ticket.ticket.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -32,6 +33,7 @@ import lombok.Data;
  * </ul>
  */
 @Data
+@Schema(description = "新增工单评论参数")
 public class TicketCommentCreateDTO {
 
     @NotBlank(message = "评论内容不能为空")

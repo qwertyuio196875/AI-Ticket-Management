@@ -6,6 +6,8 @@ import com.ticket.ticket.vo.PriorityCountVO;
 import com.ticket.ticket.vo.StatsSummaryVO;
 import com.ticket.ticket.vo.TopHandlerVO;
 import com.ticket.ticket.vo.TrendItemVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +38,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/stats/tickets")
+@Tag(name = "stats", description = "数据统计：Dashboard 4 张图")
 public class StatsController {
 
     private final TicketStatsService ticketStatsService;
@@ -49,6 +52,7 @@ public class StatsController {
      */
     @GetMapping("/summary")
     @PreAuthorize("hasAuthority('stats:view')")
+    @Operation(summary = "工单状态分布 + 总数")
     public Result<StatsSummaryVO> summary() {
         return Result.success(ticketStatsService.summary());
     }
@@ -60,6 +64,7 @@ public class StatsController {
      */
     @GetMapping("/trend")
     @PreAuthorize("hasAuthority('stats:view')")
+    @Operation(summary = "近 N 天新建工单趋势")
     public Result<List<TrendItemVO>> trend(@RequestParam(defaultValue = "7") int days) {
         return Result.success(ticketStatsService.trend(days));
     }
@@ -69,6 +74,7 @@ public class StatsController {
      */
     @GetMapping("/by-priority")
     @PreAuthorize("hasAuthority('stats:view')")
+    @Operation(summary = "按优先级统计工单数")
     public Result<List<PriorityCountVO>> byPriority() {
         return Result.success(ticketStatsService.byPriority());
     }
@@ -80,6 +86,7 @@ public class StatsController {
      */
     @GetMapping("/top-handlers")
     @PreAuthorize("hasAuthority('stats:view')")
+    @Operation(summary = "TOP N 处理人按已解决工单数排序")
     public Result<List<TopHandlerVO>> topHandlers(@RequestParam(defaultValue = "10") int limit) {
         return Result.success(ticketStatsService.topHandlers(limit));
     }

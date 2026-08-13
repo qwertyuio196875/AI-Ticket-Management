@@ -58,4 +58,40 @@ public interface TicketStatsMapper {
      * @return Map 列表：key = {@code handlerId / handlerName / resolvedCount}
      */
     List<Map<String, Object>> topHandlersByResolved(@Param("limit") int limit);
+
+    // ---------- ticket 11 / DailyTicketStatsTask 专用 ----------
+
+    /**
+     * 指定日期新建的工单数（{@code is_deleted=0}）。
+     * <p>
+     * 区间 {@code [date 00:00, date+1 00:00)}，按 {@code create_time} 落入哪一天统计。
+     *
+     * @param date 统计日期（含当日 0 点）
+     * @return 新建数（无则返回 0）
+     */
+    long countCreatedOn(@Param("date") LocalDate date);
+
+    /**
+     * 指定日期变更为 RESOLVED 的工单数。
+     * <p>
+     * 来源：{@code ticket_log} 中 {@code event_type='STATUS_CHANGED'} 且 content 含
+     * {@code RESOLVED} 的记录 + 当日 {@code create_time}。
+     *
+     * @param date 统计日期
+     * @return 当日解决数（无则返回 0）
+     */
+    long countResolvedOn(@Param("date") LocalDate date);
+
+    /**
+     * 指定日期内被解决工单的平均处理时长（分钟，向下取整）。
+     * <p>
+     * 分子：每张工单从 {@code ticket_info.create_time} 到
+     * {@code ticket_log.create_time}（首次 STATUS_CHANGED → RESOLVED）的分钟差之和。
+     * 分母：当日被解决的工单数。
+     * 当日无解决工单时返回 0（避免空集除零）。
+     *
+     * @param date 统计日期
+     * @return 平均处理分钟数（无解决工单 → 0）
+     */
+    long avgHandleMinutesOn(@Param("date") LocalDate date);
 }

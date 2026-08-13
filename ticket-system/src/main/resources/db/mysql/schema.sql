@@ -241,3 +241,43 @@ CREATE TABLE IF NOT EXISTS ai_ticket_record
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='AI 调用记录（含失败 error_log）';
+
+-- 定时任务执行日志（ticket 11） -------------------------------
+-- 每次 @Scheduled 任务执行落一条记录：start_time / end_time / status / error_message
+-- task_name 形如 "JwtBlacklistCleanupTask" / "DailyTicketStatsTask"
+-- status 取值见 TaskExecutionStatus 枚举（SUCCESS / FAILED）
+-- error_message 截断 2000 字符；end_time 与 start_time 差值即耗时
+CREATE TABLE IF NOT EXISTS task_execution_log
+(
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    task_name     VARCHAR(100)    NOT NULL COMMENT '任务名（Spring Bean 名）',
+    start_time    DATETIME        NOT NULL COMMENT '开始时间',
+    end_time      DATETIME        NOT NULL COMMENT '结束时间',
+    status        VARCHAR(20)     NOT NULL COMMENT '执行状态 SUCCESS / FAILED',
+    error_message VARCHAR(2000)            DEFAULT NULL COMMENT '异常摘要（仅 FAILED 时有值），截断 2000 字符',
+    create_time   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '落库时间',
+    PRIMARY KEY (id),
+    KEY idx_task_execution_log_task_name (task_name),
+    KEY idx_task_execution_log_create_time (create_time)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='定时任务执行日志';
+
+-- 每日工单统计（ticket 11） -----------------------------------
+-- 由 DailyTicketStatsTask 在每天早 8 点统计"昨日"工单数与平均处理时长
+-- date 唯一：同一日期多次执行走 upsert / INSERT IGNORE 防重复
+-- avg_handle_minutes：基于 ticket_info.create_time 与最近一次 ticket_log
+--   （event_type=STATUS_CHANGED 且 target=RESOLVED）的 create_time 之差，单位分钟
+CREATE TABLE IF NOT EXISTS daily_ticket_stats
+(
+    id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    date               DATE            NOT NULL COMMENT '统计日期',
+    created_count      BIGINT          NOT NULL DEFAULT 0 COMMENT '当日新建工单数',
+    resolved_count     BIGINT          NOT NULL DEFAULT 0 COMMENT '当日已解决工单数',
+    avg_handle_minutes BIGINT          NOT NULL DEFAULT 0 COMMENT '平均处理时长（分钟，向下取整）',
+    create_time        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '落库时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_daily_ticket_stats_date (date)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='每日工单统计（定时任务写入）';

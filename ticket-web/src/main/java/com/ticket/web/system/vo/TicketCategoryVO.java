@@ -1,12 +1,13 @@
 package com.ticket.web.system.vo;
 
 import com.ticket.system.entity.TicketCategory;
-
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 
 /**
  * 工单分类 VO —— 前端展示用。
  */
+@Schema(description = "工单分类展示对象")
 public record TicketCategoryVO(
         Long id,
         String name,
