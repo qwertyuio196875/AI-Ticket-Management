@@ -43,6 +43,20 @@ import org.springframework.context.annotation.Configuration;
 public class AiConfig {
 
     /**
+     * ChatClient Bean（ticket 08 修复）。
+     * <p>
+     * Spring AI 1.0.0-M6 的自动装配只提供 {@link ChatClient.Builder}，
+     * 不直接创建 {@link ChatClient}（反编译确认 ChatClientAutoConfiguration
+     * 仅声明 builder() 方法）。业务适配层需要注入 ChatClient，
+     * 故在此显式从 Builder 构建单例，避免启动时
+     * "No qualifying bean of type ChatClient" 失败。
+     */
+    @Bean
+    public ChatClient chatClient(ChatClient.Builder builder) {
+        return builder.build();
+    }
+
+    /**
      * ChatClient → ChatContentExtractor 适配层。
      * <p>
      * ChatClient Bean 由 Spring AI 自动装配（spring-ai-openai-spring-boot-starter）；
