@@ -48,6 +48,20 @@
 
 依赖关系：`ticket-web` → `ticket-security / ticket-system / ticket-ticket / ticket-ai / ticket-common`；业务模块 → `ticket-common`；`ticket-common` → （无）。
 
+## 📐 系统架构可视化
+
+### 整体架构
+
+![系统架构图](docs/images/architecture.png)
+
+> 客户端 → nginx → `ticket-web`（12 个 Controller） → 5 个业务模块 → MySQL / Redis / Redisson / 阿里云 OSS / DeepSeek API。
+
+### 工单状态机
+
+![工单状态机图](docs/images/state-machine.png)
+
+> 4 状态 + 5 条合法迁移；非法迁移抛业务异常 `T0102`；迁移规则集中在 `TicketStatus.canTransitTo` 静态方法校验。
+
 ## 🚀 快速启动
 
 ### 环境要求
@@ -118,7 +132,7 @@
 - ✅ 后端 `ping` 接口返回 `pong`
 - ✅ Knife4j 能打开（`/doc.html`）并看到 12 个业务 Controller
 - ✅ 前端登录页能跳转到主布局（`Dashboard` + `工单列表` 可见）
-- ✅ 创建工单后能在工单详情页看到「AI 智能回复」按钮（不设 `DEEPSEEK_API_KEY` 时点击返回模板回复）
+- ✅ 创建工单后，可在详情页点击「AI 智能回复」按钮（无 Key 时返回模板回复）
 
 ## 🧪 测试
 
@@ -150,7 +164,6 @@ docker run -d --name ai-ticket -p 8080:8080 \
 
 ## ✉️ 关于作者
 
-项目由个人开发者独立设计并实现，作为实习面试的项目经验展示。
+本项目是我为准备**第一次实习面试**而独立设计并实现，旨在展示**后端工程能力与 AI 集成实践**。
 
-- 项目目录：`AGENTS.md`（开发规范） · `CONTEXT.md`（领域词汇表） · `docs/adr/`（15 份架构决策记录） · `docs/test-summary.md`（测试摘要） · `docs/deployment/aliyun-ecs.md`（部署手册） · `docs/resume-project-description.md`（简历项目描述）
 - 技术亮点：Spring AI 集成 + 双层降级 / 工单状态机 + 业务事件流 / Redis 三层缓存防护 / AOP 自定义注解审计 / 两层 RBAC + JWT 黑名单 / MySQL 联合索引 EXPLAIN 验证 / Vue 3 自研 `v-permission` 指令 / Playwright E2E

@@ -48,6 +48,10 @@ teach/
 # docs/ 是内部协作文档（adr / agents / plans / PROJECT-STRUCTURE），仅本地保留，不入远程仓库
 CONTEXT.md
 docs/
+!docs/
+!docs/images/
+!docs/images/architecture.png
+!docs/images/state-machine.png
 
 # Node (if any tooling added later)
 node_modules/
