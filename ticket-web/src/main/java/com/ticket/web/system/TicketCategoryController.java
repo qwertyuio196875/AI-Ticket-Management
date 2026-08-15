@@ -24,6 +24,7 @@ import java.util.List;
  * 工单分类管理接口（ticket 04）。
  * <ul>
  *     <li>{@code GET    /api/v1/ticket-categories}：所有已启用分类列表（所有已登录用户可访问）</li>
+ *     <li>{@code GET    /api/v1/ticket-categories/manage}：全部分类（含禁用，需 category:manage，ticket 14）</li>
  *     <li>{@code GET    /api/v1/ticket-categories/{id}}：详情（需 category:manage）</li>
  *     <li>{@code POST   /api/v1/ticket-categories}：创建（需 category:manage）</li>
  *     <li>{@code PUT    /api/v1/ticket-categories}：更新（需 category:manage）</li>
@@ -48,6 +49,20 @@ public class TicketCategoryController {
     @Operation(summary = "查询所有已启用分类（下拉框用）")
     public Result<List<TicketCategoryVO>> listAllEnabled() {
         return Result.success(ticketCategoryService.listAllEnabled().stream()
+                .map(TicketCategoryVO::from).toList());
+    }
+
+    /**
+     * 查询全部分类（含禁用）—— 分类管理页 CRUD 用（ticket 14）。
+     * <p>
+     * 禁用项也要可见，否则停用后无法再启用。精确路径 {@code /manage} 优先于
+     * {@code /{id}} 模板匹配，与方法声明顺序无关（Spring 路径优先级规则）。
+     */
+    @GetMapping("/manage")
+    @PreAuthorize("hasAuthority('category:manage')")
+    @Operation(summary = "查询全部分类（含禁用，分类管理页用）")
+    public Result<List<TicketCategoryVO>> listAll() {
+        return Result.success(ticketCategoryService.listAll().stream()
                 .map(TicketCategoryVO::from).toList());
     }
 

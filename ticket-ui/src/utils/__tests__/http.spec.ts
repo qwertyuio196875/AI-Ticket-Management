@@ -26,7 +26,14 @@ vi.mock('../../router', () => ({
 }))
 
 import { ElMessage } from 'element-plus'
-import { requestInterceptor, responseInterceptor, responseErrorHandler, TOKEN_KEY, type Result } from '../http'
+import {
+  requestInterceptor,
+  responseInterceptor,
+  responseErrorHandler,
+  parseFilenameFromDisposition,
+  TOKEN_KEY,
+  type Result,
+} from '../http'
 
 function makeConfig(url = '/v1/tickets'): InternalAxiosRequestConfig {
   return {
@@ -36,7 +43,7 @@ function makeConfig(url = '/v1/tickets'): InternalAxiosRequestConfig {
   } as InternalAxiosRequestConfig
 }
 
-function makeResponse(code: number, message: string, data: unknown = null) {
+function makeResponse(code: string, message: string, data: unknown = null) {
   return {
     data: { code, message, data },
     status: 200,
@@ -88,17 +95,40 @@ describe('http 拦截器', () => {
   })
 
   describe('responseInterceptor（响应拦截器）', () => {
-    it('Result.code === 200 时返回整个 Result（response.data）', () => {
-      const response = makeResponse(200, 'success', { token: 't1' })
+    it('Result.code === "200" 时返回整个 Result（response.data）', () => {
+      const response = makeResponse('200', 'success', { token: 't1' })
       const result = responseInterceptor(response)
-      expect(result).toEqual({ code: 200, message: 'success', data: { token: 't1' } })
+      expect(result).toEqual({ code: '200', message: 'success', data: { token: 't1' } })
     })
 
-    it('Result.code !== 200 时提示后端错误消息并 reject', async () => {
-      const response = makeResponse(500, '用户名或密码错误')
+    it('Result.code !== "200" 时提示后端错误消息并 reject', async () => {
+      const response = makeResponse('T0101', '用户名或密码错误')
       const promise = responseInterceptor(response)
       await expect(promise).rejects.toThrow('用户名或密码错误')
       expect(ElMessage.error).toHaveBeenCalledWith('用户名或密码错误')
+    })
+  })
+
+  describe('parseFilenameFromDisposition（Content-Disposition 文件名解析）', () => {
+    it('解析 filename="xxx" 形式（RFC 5987 之外的普通形式）', () => {
+      expect(parseFilenameFromDisposition('attachment; filename="tickets-20250101.xlsx"')).toBe(
+        'tickets-20250101.xlsx',
+      )
+    })
+
+    it('解析 filename 无引号形式', () => {
+      expect(parseFilenameFromDisposition('attachment; filename=tickets.xlsx')).toBe('tickets.xlsx')
+    })
+
+    it('优先解析 filename*=UTF-8\'\' 编码形式并做 URL 解码（含中文）', () => {
+      const disposition = "attachment; filename=\"tickets.xlsx\"; filename*=UTF-8''%E5%B7%A5%E5%8D%95.xlsx"
+      expect(parseFilenameFromDisposition(disposition)).toBe('工单.xlsx')
+    })
+
+    it('无 Content-Disposition 或无法解析时返回 null', () => {
+      expect(parseFilenameFromDisposition(undefined)).toBeNull()
+      expect(parseFilenameFromDisposition('')).toBeNull()
+      expect(parseFilenameFromDisposition('inline')).toBeNull()
     })
   })
 

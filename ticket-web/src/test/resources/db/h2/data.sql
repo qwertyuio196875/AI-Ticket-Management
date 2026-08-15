@@ -16,7 +16,7 @@ MERGE INTO sys_user (id, username, password, nickname, status) KEY (id)
     VALUES (2, 'resigned',
             '$2a$10$MQKQ7Jv5VkM7Gkfzzcj.GexHeZQdBR8PBtY4BFgifgececRtcpNfm',
             '已离职员工', 0);
--- agent_user：普通客服，密码 admin123，仅有 ticket:view / dashboard:view
+-- agent_user：普通客服，密码 admin123，仅有 ticket:view / stats:view
 MERGE INTO sys_user (id, username, password, nickname, status) KEY (id)
     VALUES (3, 'agent_user',
             '$2a$10$MQKQ7Jv5VkM7Gkfzzcj.GexHeZQdBR8PBtY4BFgifgececRtcpNfm',
@@ -30,20 +30,20 @@ MERGE INTO sys_role (id, role_name, role_key, remark) KEY (id)
 
 -- 菜单 ---------------------------------------------------------
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
-    VALUES (1, 0, 'Dashboard',  'C', '/dashboard',  'Dashboard',  'dashboard', 1, 1, 'dashboard:view');
+    VALUES (1, 0, 'Dashboard',  'C', '/dashboard',  'Dashboard',  'dashboard', 1, 1, 'stats:view');
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
-    VALUES (2, 0, '用户管理',   'C', '/users',      'UserList',   'user',      2, 1, 'user:manage');
+    VALUES (2, 0, '用户管理',   'C', '/system/users', 'UserList',   'user',      2, 1, 'user:manage');
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
-    VALUES (3, 0, '角色管理',   'C', '/roles',      'RoleList',   'role',      3, 1, 'role:manage');
+    VALUES (3, 0, '角色管理',   'C', '/system/roles', 'RoleList',   'role',      3, 1, 'role:manage');
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
-    VALUES (4, 0, '菜单管理',   'C', '/menus',      'MenuList',   'menu',      4, 1, 'menu:manage');
+    VALUES (4, 0, '菜单管理',   'C', '/system/menus', 'MenuList',   'menu',      4, 1, 'menu:manage');
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
     VALUES (5, 0, '工单列表',   'C', '/tickets',    'TicketList', 'ticket',    5, 1, 'ticket:view');
 -- ticket 04 新增两个权限点
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
-    VALUES (6, 0, '字典管理', 'C', '/dicts',          'DictList',          'dict',     6, 1, 'dict:manage');
+    VALUES (6, 0, '字典管理', 'C', '/system/dicts', 'DictList', 'dict', 6, 1, 'dict:manage');
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
-    VALUES (7, 0, '工单分类', 'C', '/ticket-categories', 'TicketCategoryList', 'category', 7, 1, 'category:manage');
+    VALUES (7, 0, '工单分类', 'C', '/system/ticket-categories', 'TicketCategoryList', 'category', 7, 1, 'category:manage');
 -- ticket 05 新增三个按钮权限点（挂在工单列表菜单 id=5 下；写操作只允许管理员）
 -- ticket:update 预留 ticket 06+，ticket 05 仍由 Service "创建人或管理员" 规则把关
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
@@ -85,9 +85,11 @@ MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 12
 -- ticket 07：admin + agent 都拥有 ticket:comment（回复工单）
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 13);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 13);
--- ticket 10 新增 dashboard 权限点：stats:view（admin + agent 都可看统计）
+-- ticket 10 新增 dashboard 权限点：stats:view（admin + agent 都可看统计）。
+-- ticket 14 起 Dashboard 菜单（id=1）本身携带 stats:view（uk_sys_menu_permission 唯一约束
+-- 下不能重复挂），本按钮行保留为占位（permission 置空），stats:view 经 id=1 提供。
 MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
-    VALUES (15, 1, '统计查看', 'F', '', '', '', 1, 1, 'stats:view');
+    VALUES (15, 1, '统计查看', 'F', '', '', '', 1, 1, '');
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 15);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 15);
 -- ticket 12 新增附件权限点：ticket:upload（admin + agent 都可上传/删除附件，与 ticket:comment 绑定一致）
@@ -95,6 +97,10 @@ MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon,
     VALUES (16, 5, '上传附件', 'F', '', '', '', 7, 1, 'ticket:upload');
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 16);
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (2, 16);
+-- ticket 14 新增 AI 权限点：ai:invoke（AI 智能回复按钮，ticket 08 端点；admin 专属，与 ticket:assign/close 一致）
+MERGE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) KEY (id)
+    VALUES (17, 5, 'AI 智能回复', 'F', '', '', '', 8, 1, 'ai:invoke');
+MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 17);
 -- ticket 07：admin 拥有 "admin" 伪 authority（service 内"管理员"判定）
 MERGE INTO sys_role_menu (role_id, menu_id) KEY (role_id, menu_id) VALUES (1, 14);
 -- agent：仅 dashboard + ticket

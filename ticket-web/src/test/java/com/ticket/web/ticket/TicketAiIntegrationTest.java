@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -131,13 +132,13 @@ class TicketAiIntegrationTest {
         Long ticketId = objectMapper.readTree(createResp).path("data").asLong();
 
         // 调用 AI 回复接口（ChatClient mock → fallback）。
-        // 注意：{@code ai:invoke} 权限字符串尚未在 sys_menu 表 seed 中出现（spec 提到
-        // 但本期 ticket 14 才补菜单）；本测试 seed 中 admin 通过 admin role key 拥有
-        // 所有权限可能不足。HttpStatus 校验在 @PreAuthorize 通过 / 失败两种路径下分别期望 200 / 403。
+        // {@code ai:invoke} 权限点自 ticket 14 起已补入 sys_menu 种子并绑定 admin，
+        // 因此 admin 调用会通过 @PreAuthorize → 期望 200 + 兜底模板；
+        // 403 分支仅作防御性保留（若未来权限调整，Service 层 fallback 行为由 DeepSeekReplierTest 单测覆盖）。
         String aiReplyResp = mockMvc().perform(post(TICKETS_URL + "/" + ticketId + "/ai-reply")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andReturn().getResponse().getContentAsString();
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 
         JsonNode replyJson = objectMapper.readTree(aiReplyResp);
         String code = replyJson.path("code").asText();
@@ -148,8 +149,8 @@ class TicketAiIntegrationTest {
                     .contains("预计 1 个工作日内回复");
             assertThat(replyJson.path("data").path("fallback").asBoolean()).isTrue();
         } else {
-            // 权限拦截（admin 当前没有 ai:invoke 权限字符串）：期望 403
-            // 真正的 Service 层 fallback 行为由 DeepSeekReplierTest 单测覆盖
+            // 防御性保留：若未来调整权限导致 403，断言业务码（Service 层 fallback
+            // 行为由 DeepSeekReplierTest 单测覆盖）
             assertThat(code).isEqualTo("403");
         }
     }

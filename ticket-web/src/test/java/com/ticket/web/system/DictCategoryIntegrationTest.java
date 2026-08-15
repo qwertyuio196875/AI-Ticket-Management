@@ -33,6 +33,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *     <li>无权限用户（agent_user）调用 POST /ticket-categories → 403</li>
  *     <li>有权限用户（admin）创建/查询 → 200</li>
  *     <li>读端点（GET /dicts/type/priority、GET /ticket-categories）所有已登录用户可访问</li>
+ *     <li>ticket 14：GET /ticket-categories/manage 需 category:manage，
+ *         精确路径优先于 /{id} 模板匹配（返回全量数组而非被 {id} 吞掉）</li>
  * </ul>
  */
 @SpringBootTest
@@ -138,6 +140,29 @@ class DictCategoryIntegrationTest {
     }
 
     // ---------- category:manage 权限校验 ----------
+
+    @Test
+    void get_categories_manage_as_admin_returns_full_list() throws Exception {
+        // ticket 14 路由验证：/manage 是精确路径，Spring 优先于 /{id} 模板匹配 ——
+        // 若被 /{id} 捕获，"manage" 无法解析为 Long 会抛类型转换异常（400/500），
+        // 绝不会返回 200 + 数组。断言返回数组（非单条详情）即证明精确路由生效。
+        String adminToken = loginAs("admin", "admin123");
+        mockMvc().perform(get(CATEGORIES_URL + "/manage")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(equalTo("200")))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(org.hamcrest.Matchers.greaterThanOrEqualTo(5)));
+    }
+
+    @Test
+    void get_categories_manage_as_agent_user_without_category_manage_returns_403() throws Exception {
+        String agentToken = loginAs("agent_user", "admin123");
+        mockMvc().perform(get(CATEGORIES_URL + "/manage")
+                        .header("Authorization", "Bearer " + agentToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(equalTo("403")));
+    }
 
     @Test
     void post_categories_as_agent_user_without_category_manage_returns_403() throws Exception {

@@ -53,6 +53,16 @@ public class TicketCategoryServiceImpl implements TicketCategoryService {
     }
 
     @Override
+    public List<TicketCategory> listAll() {
+        // 全量（含禁用）—— 分类管理页 CRUD 用：不做 status 过滤，
+        // 排序与 listAllEnabled 保持一致（sort ASC, id ASC）
+        LambdaQueryWrapper<TicketCategory> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByAsc(TicketCategory::getSort)
+                .orderByAsc(TicketCategory::getId);
+        return categoryMapper.selectList(wrapper);
+    }
+
+    @Override
     public TicketCategory getById(Long id) {
         TicketCategory category = categoryMapper.selectById(id);
         if (category == null) {

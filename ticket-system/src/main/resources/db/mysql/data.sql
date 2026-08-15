@@ -24,13 +24,13 @@ INSERT IGNORE INTO sys_role (id, role_name, role_key, remark) VALUES
 
 -- 菜单 ----------------------------------------------------------
 -- permission 与 ticket 03 验收标准对应：
---   dashboard:view  / user:manage / role:manage /
+--   stats:view     / user:manage / role:manage /
 --   menu:manage     / ticket:view
 INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) VALUES
-    (1, 0, 'Dashboard',  'C', '/dashboard',  'Dashboard',     'dashboard', 1, 1, 'dashboard:view'),
-    (2, 0, '用户管理',   'C', '/users',      'UserList',      'user',      2, 1, 'user:manage'),
-    (3, 0, '角色管理',   'C', '/roles',      'RoleList',      'role',      3, 1, 'role:manage'),
-    (4, 0, '菜单管理',   'C', '/menus',      'MenuList',      'menu',      4, 1, 'menu:manage'),
+    (1, 0, 'Dashboard',  'C', '/dashboard',  'Dashboard',     'dashboard', 1, 1, 'stats:view'),
+    (2, 0, '用户管理',   'C', '/system/users', 'UserList',      'user',      2, 1, 'user:manage'),
+    (3, 0, '角色管理',   'C', '/system/roles', 'RoleList',      'role',      3, 1, 'role:manage'),
+    (4, 0, '菜单管理',   'C', '/system/menus', 'MenuList',      'menu',      4, 1, 'menu:manage'),
     (5, 0, '工单列表',   'C', '/tickets',    'TicketList',    'ticket',    5, 1, 'ticket:view');
 
 -- 角色 ↔ 菜单 ---------------------------------------------------
@@ -71,8 +71,8 @@ INSERT IGNORE INTO ticket_category (name, description, sort, status) VALUES
 -- 菜单权限点（ticket 04） ------------------------------------
 -- 字典管理、工单分类管理：与 ticket 03 风格一致，顶层 C 类型菜单
 INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) VALUES
-    (6, 0, '字典管理',   'C', '/dicts',          'DictList',          'dict',     6, 1, 'dict:manage'),
-    (7, 0, '工单分类',   'C', '/ticket-categories', 'TicketCategoryList', 'category', 7, 1, 'category:manage');
+    (6, 0, '字典管理',   'C', '/system/dicts', 'DictList',          'dict',     6, 1, 'dict:manage'),
+    (7, 0, '工单分类',   'C', '/system/ticket-categories', 'TicketCategoryList', 'category', 7, 1, 'category:manage');
 
 -- 角色 ↔ 菜单（admin 新增两个权限点；agent 维持原状）
 INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
@@ -129,11 +129,13 @@ INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (1, 14);
 
 -- 菜单权限点（ticket 10） ------------------------------------
 -- stats:view —— Dashboard 统计查看（4 个 /stats/tickets/* 端点）
--- admin + agent 都可看统计
+-- ticket 14 起 Dashboard 菜单（id=1）本身携带 stats:view；uk_sys_menu_permission
+-- 唯一约束下不能重复挂，本按钮行保留为"统计查看"占位（permission 置空，不再提供独立权限）。
+-- admin + agent 都可看统计（经 id=1 获得 stats:view）
 INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) VALUES
-    (15, 1, '统计查看', 'F', '', '', '', 1, 1, 'stats:view');
+    (15, 1, '统计查看', 'F', '', '', '', 1, 1, '');
 
--- 角色 ↔ 菜单：admin + agent 都拥有 stats:view
+-- 角色 ↔ 菜单：admin + agent 都拥有 stats:view（来自 id=1）
 INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
     (1, 15), (2, 15);
 
@@ -146,3 +148,13 @@ INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, componen
 -- 角色 ↔ 菜单：admin + agent 都拥有 ticket:upload（与 ticket:comment 绑定一致）
 INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
     (1, 16), (2, 16);
+
+-- 菜单权限点（ticket 14） ------------------------------------
+-- ai:invoke —— AI 智能回复按钮（POST /tickets/{id}/ai-reply 端点，ticket 08）
+-- 挂在工单列表菜单（id=5）下作按钮；agent 不绑 —— 与 ticket:assign/close 等管理员专属一致
+INSERT IGNORE INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, icon, sort, visible, permission) VALUES
+    (17, 5, 'AI 智能回复', 'F', '', '', '', 8, 1, 'ai:invoke');
+
+-- 角色 ↔ 菜单：admin 拥有 ai:invoke（agent 不绑，管理员专属）
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
+    (1, 17);
