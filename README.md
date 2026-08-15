@@ -2,14 +2,6 @@
 
 > 基于 Spring Boot 3 + Vue 3 + DeepSeek 的企业级单体工单管理系统，集成 AI 实现工单自动分类与智能回复辅助。
 
-## 界面截图
-
-### 登录页
-![登录页](docs/images/screenshot-login.png)
-
-### 统计 Dashboard
-![统计 Dashboard](docs/images/screenshot-dashboard.png)
-
 ## 📖 项目简介
 
 本项目面向企业内部员工的报障场景，解决「工单流程冗长、分类依赖人工、客服响应慢」的问题。系统覆盖工单**创建 → 智能分类 → 分配 → 多轮对话 → 解决 → 关闭**的全生命周期，并基于 DeepSeek 实现创建时的自动分类与详情页的 AI 智能回复建议，AI 失败**双层降级**不阻塞主流程。
